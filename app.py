@@ -229,9 +229,7 @@ if st.sidebar.button("Analyze Comment"):
 
 # Main content
 if analyze_button:
-    if not api_key:
-        st.error("⚠️ Please enter the YouTube API Key")
-    elif not video_url:
+    if not video_url:
         st.error("⚠️ Please enter the YouTube video URL")
     else:
         video_id = extract_video_id(video_url)
@@ -240,7 +238,7 @@ if analyze_button:
             st.error("⚠️ Invalid video URL")
         else:
             with st.spinner("🔄 Fetching and analyzing comments..."):
-                comments = get_youtube_comments(video_id, api_key, max_comments)
+                comments = get_youtube_comments(video_id, max_comments)
 
                 if not comments:
                     st.error("❌ No comments found or an error occurred")
@@ -313,21 +311,6 @@ if analyze_button:
 
 else:
     st.markdown("""
-    ## 🎯 How to Use the App:
-
-    1. **Get a YouTube API Key:**
-       - Visit [Google Cloud Console](https://console.cloud.google.com/)
-       - Create or select a project
-       - Enable YouTube Data API v3
-       - Generate a new API Key
-
-    2. **Enter the required info:**
-       - API Key in the sidebar
-       - YouTube video URL
-       - Number of comments to analyze
-
-    3. **Click the "Analyze Comments" button**
-
     ## 📊 Features:
     - Automatic sentiment analysis of YouTube comments
     - Interactive visualizations
