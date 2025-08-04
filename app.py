@@ -11,21 +11,29 @@ from youtube_comment_downloader import YoutubeCommentDownloader
 import gdown
 import os
 
-def download_file_from_drive(file_id, filename):
-    if not os.path.exists(filename):
-        url = f"https://drive.google.com/uc?id={file_id}"
-        gdown.download(url, filename, quiet=False)
+# def download_file_from_drive(file_id, filename):
+#     if not os.path.exists(filename):
+#         url = f"https://drive.google.com/uc?id={file_id}"
+#         gdown.download(url, filename, quiet=False)
 
 def download_model():
-    os.makedirs("modell", exist_ok=True)
-    os.chdir("modell")
+    model_dir = "model"
+    os.makedirs(model_dir, exist_ok=True)
 
-    download_file_from_drive("181NGDNj-jTUY9JH5AtMW9Ez7FAiJPtqR", "config.json")
-    download_file_from_drive("1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-", "model.safetensors")
-    download_file_from_drive("1ZM-u0_4zB21ZpL6507_ZiOm5Aa0n1x1T", "tokenizer_config.json")
-    download_file_from_drive("1DKsomb6RgIqombyJ3IsVemmJUu16yYDh", "special_tokens_map.json")
-    download_file_from_drive("1X-YW8e54-O63z_oFFzZnFK54bTHBvx0y", "tokenizer_args.bin")
-    download_file_from_drive("1v5y-ffp9O6FW7T3G2tST26O1RmdugxXf", "vocab.txt")
+    files = {
+        "181NGDNj-jTUY9JH5AtMW9Ez7FAiJPtqR": "config.json",
+        "1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-": "model.safetensors",
+        "1ZM-u0_4zB21ZpL6507_ZiOm5Aa0n1x1T": "tokenizer_config.json",
+        "1DKsomb6RgIqombyJ3IsVemmJUu16yYDh": "special_tokens_map.json",
+        "1X-YW8e54-O63z_oFFzZnFK54bTHBvx0y": "tokenizer_args.bin",
+        "1v5y-ffp9O6FW7T3G2tST26O1RmdugxXf": "vocab.txt"
+    }
+
+    for file_id, filename in files.items():
+        filepath = os.path.join(model_dir, filename)
+        if not os.path.exists(filepath):
+            url = f"https://drive.google.com/uc?id={file_id}"
+            gdown.download(url, filepath, quiet=False)
 
 # Load model
 model_path = download_model()
