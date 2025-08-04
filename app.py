@@ -17,7 +17,7 @@ def download_file_from_drive(file_id, filename):
         gdown.download(url, filename, quiet=False)
 
 def download_model():
-    os.makedirs("model", exist_ok=True)
+    os.makedirs("modell", exist_ok=True)
     os.chdir("modell")
 
     download_file_from_drive("181NGDNj-jTUY9JH5AtMW9Ez7FAiJPtqR", "config.json")
