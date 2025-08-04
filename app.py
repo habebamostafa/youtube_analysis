@@ -54,11 +54,19 @@ def verify_files():
 @st.cache_resource
 def load_model():
     download_model()
+    
+    # Verify all files exist
+    required_files = ["config.json", "model.safetensors", "special_tokens_map.json", 
+                     "tokenizer_config.json", "vocab.txt"]
+    missing_files = [f for f in required_files if not os.path.exists(f)]
+    if missing_files:
+        st.error(f"Missing files: {missing_files}")
+        return None, None
+    
     try:
         model = BertForSequenceClassification.from_pretrained(
             ".",
-            local_files_only=True,
-            ignore_mismatched_sizes=True
+            local_files_only=True
         )
         tokenizer = BertTokenizer.from_pretrained(
             ".",
