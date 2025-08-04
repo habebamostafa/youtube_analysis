@@ -37,11 +37,12 @@ def download_model():
 
     return model_dir
 # Load model
-model_path = download_model()
+
 
 @st.cache_resource
 def load_model():
     # Ensure model_path is a valid Hugging Face model ID or a local path
+    model_path = download_model()
     model = BertForSequenceClassification.from_pretrained(
         model_path,
         local_files_only=True ,# Explicitly specify loading from local files
