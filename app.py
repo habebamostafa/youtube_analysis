@@ -18,7 +18,7 @@ def download_file_from_drive(file_id, filename):
 
 def download_model():
     os.makedirs("model", exist_ok=True)
-    os.chdir("model")
+    os.chdir("modell")
 
     download_file_from_drive("181NGDNj-jTUY9JH5AtMW9Ez7FAiJPtqR", "config.json")
     download_file_from_drive("1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-", "model.safetensors")
@@ -33,8 +33,8 @@ model_path = download_model()
 @st.cache_resource
 def load_model():
     download_model()
-    tokenizer = AutoTokenizer.from_pretrained("youtube_sentiment_analysis")
-    model = AutoModelForSequenceClassification.from_pretrained("youtube_sentiment_analysis")
+    tokenizer = AutoTokenizer.from_pretrained("modell")
+    model = AutoModelForSequenceClassification.from_pretrained("modell")
 
     model.eval()
     return model, tokenizer
