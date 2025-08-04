@@ -18,6 +18,7 @@ def download_file_from_drive(file_id, filename):
 
 def download_model():
     os.makedirs("modell", exist_ok=True)
+    os.chdir("modell")
 
     download_file_from_drive("181NGDNj-jTUY9JH5AtMW9Ez7FAiJPtqR", "config.json")
     download_file_from_drive("1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-", "model.safetensors")
