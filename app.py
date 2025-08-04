@@ -33,8 +33,8 @@ model_path = download_model()
 @st.cache_resource
 def load_model():
     download_model()
-    tokenizer = AutoTokenizer.from_pretrained("modell")
-    model = AutoModelForSequenceClassification.from_pretrained("modell")
+    tokenizer = BertTokenizer.from_pretrained("modell")
+    model = BertForSequenceClassification.from_pretrained("modell")
 
     model.eval()
     return model, tokenizer
