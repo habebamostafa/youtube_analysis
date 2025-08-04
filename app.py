@@ -19,42 +19,56 @@ import shutil
 
 def download_model():
     files = {
-        "181NGDNj-jTUY9JH5AtMW9Ez7FAiJPtqR": "config.json",
-        "1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-": "model.safetensors", 
-        "1DKsomb6RgIqombyJ3IsVemmJUu16yYDh": "special_tokens_map.json",
-        "1ZM-u0_4zB21ZpL6507_ZiOm5Aa0n1x1T": "tokenizer_config.json",
+        "181NGDNj-jTUY9JH5AtMW9Ez7FAiJPtqR": ("config.json", False),
+        "1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-": ("model.safetensors", True),  # Binary file
+        "1DKsomb6RgIqombyJ3IsVemmJUu16yYDh": ("special_tokens_map.json", False),
+        "1ZM-u0_4zB21ZpL6507_ZiOm5Aa0n1x1T": ("tokenizer_config.json", False),
         # "1X-YW8e54-O63z_oFFzZnFK54bTHBvx0y": "training_args.bin",
-        "1v5y-ffp9O6FW7T3G2tST26O1RmdugxXf": "vocab.txt"
+        "1v5y-ffp9O6FW7T3G2tST26O1RmdugxXf": ("vocab.txt", False)
     }
 
-    for file_id, filename in files.items():
-        filepath = os.path.join(".", filename)  # مباشرة في نفس المسار
+    for file_id, (filename, is_binary) in files.items():
+        filepath = os.path.join(".", filename)
         if not os.path.exists(filepath):
             url = f"https://drive.google.com/uc?id={file_id}"
             gdown.download(url, filepath, quiet=False)
+            if is_binary:
+                # Ensure binary files are treated as binary
+                with open(filepath, 'rb') as f:
+                    content = f.read()
+                with open(filepath, 'wb') as f:
+                    f.write(content)
 
-    return "."  # المسار الحالي
+    return "."
 
 # Load model
-
+def verify_files():
+    required_files = ["config.json", "model.safetensors", "special_tokens_map.json", 
+                     "tokenizer_config.json", "vocab.txt"]
+    for f in required_files:
+        if not os.path.exists(f):
+            st.error(f"Missing file: {f}")
+        else:
+            st.info(f"Found {f} ({os.path.getsize(f)} bytes)")
 
 @st.cache_resource
 def load_model():
-    # Ensure model_path is a valid Hugging Face model ID or a local path
-    # url = "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
     download_model()
-    # gdown.download(url, "model.safetensors", quiet=False)
-    model = BertForSequenceClassification.from_pretrained(
-        ".",
-        local_files_only=True ,# Explicitly specify loading from local files
-    )
-    tokenizer = BertTokenizer.from_pretrained(
-        ".",
-        local_files_only=True # Explicitly specify loading from local files
-    )
-
-    model.eval()
-    return model, tokenizer
+    try:
+        model = BertForSequenceClassification.from_pretrained(
+            ".",
+            local_files_only=True,
+            ignore_mismatched_sizes=True
+        )
+        tokenizer = BertTokenizer.from_pretrained(
+            ".",
+            local_files_only=True
+        )
+        model.eval()
+        return model, tokenizer
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        return None, None
 
 
 model, tokenizer = load_model()
