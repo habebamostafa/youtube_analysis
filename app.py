@@ -23,7 +23,7 @@ def download_model():
         "1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-": "model.safetensors", 
         "1DKsomb6RgIqombyJ3IsVemmJUu16yYDh": "special_tokens_map.json",
         "1ZM-u0_4zB21ZpL6507_ZiOm5Aa0n1x1T": "tokenizer_config.json",
-        "1X-YW8e54-O63z_oFFzZnFK54bTHBvx0y": "training_args.bin",
+        # "1X-YW8e54-O63z_oFFzZnFK54bTHBvx0y": "training_args.bin",
         "1v5y-ffp9O6FW7T3G2tST26O1RmdugxXf": "vocab.txt"
     }
 
