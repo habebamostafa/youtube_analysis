@@ -15,9 +15,15 @@ import os
 #     if not os.path.exists(filename):
 #         url = f"https://drive.google.com/uc?id={file_id}"
 #         gdown.download(url, filename, quiet=False)
+import shutil
 
 def download_model():
     model_dir = "model"
+
+    # 🧹 حذف المجلد لو موجود مسبقاً (عشان نبدأ من جديد)
+    if os.path.exists(model_dir):
+        shutil.rmtree(model_dir)
+
     os.makedirs(model_dir, exist_ok=True)
 
     files = {
