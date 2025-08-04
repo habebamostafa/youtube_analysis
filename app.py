@@ -28,7 +28,7 @@ def download_model():
         "1X-YW8e54-O63z_oFFzZnFK54bTHBvx0y": "tokenizer_args.bin",
         "1v5y-ffp9O6FW7T3G2tST26O1RmdugxXf": "vocab.txt"
     }
-
+https://drive.google.com/file/d/1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-/view?usp=drive_link
     for file_id, filename in files.items():
         filepath = os.path.join(model_dir, filename)
         if not os.path.exists(filepath):
