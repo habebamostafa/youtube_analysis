@@ -28,7 +28,7 @@ def download_model():
     download_file_from_drive("1v5y-ffp9O6FW7T3G2tST26O1RmdugxXf", "vocab.txt")
 
 # Load model
-model_path = download_model_file()
+model_path = download_model()
 
 @st.cache_resource
 def load_model():
