@@ -11,14 +11,8 @@ from youtube_comment_downloader import YoutubeCommentDownloader
 import gdown
 import os
 
-# def download_file_from_drive(file_id, filename):
-#     if not os.path.exists(filename):
-#         url = f"https://drive.google.com/uc?id={file_id}"
-#         gdown.download(url, filename, quiet=False)
-import shutil
 
 def download_model_files():
-    # ملفات GitHub (سيتم تحميلها مع المشروع)
     github_files = [
         "config.json",
         "special_tokens_map.json",
@@ -26,7 +20,6 @@ def download_model_files():
         "vocab.txt"
     ]
     
-    # تحميل model.safetensors من Google Drive إذا لم يكن موجوداً
     if not os.path.exists("model.safetensors"):
         model_url = "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
         gdown.download(model_url, "model.safetensors", quiet=False)
@@ -41,7 +34,7 @@ def load_model():
         model.eval()
         return model, tokenizer
     except Exception as e:
-        st.error(f"حدث خطأ في تحميل النموذج: {str(e)}")
+        st.error(f"error: {str(e)}")
         return None, None
 
 model, tokenizer = load_model()
