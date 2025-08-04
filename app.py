@@ -17,76 +17,31 @@ import os
 #         gdown.download(url, filename, quiet=False)
 import shutil
 
-def download_model():
-    files = {
-        "181NGDNj-jTUY9JH5AtMW9Ez7FAiJPtqR": ("config.json", "text"),
-        "1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-": ("model.safetensors", "binary"),
-        "1DKsomb6RgIqombyJ3IsVemmJUu16yYDh": ("special_tokens_map.json", "text"),
-        "1ZM-u0_4zB21ZpL6507_ZiOm5Aa0n1x1T": ("tokenizer_config.json", "text"),
-        "1v5y-ffp9O6FW7T3G2tST26O1RmdugxXf": ("vocab.txt", "text")
-    }
-
-    for file_id, (filename, filetype) in files.items():
-        filepath = os.path.join(".", filename)
-        if not os.path.exists(filepath):
-            url = f"https://drive.google.com/uc?id={file_id}"
-            try:
-                if filetype == "binary":
-                    # Download binary files with gdown and ensure binary mode
-                    gdown.download(url, filepath, quiet=False)
-                    with open(filepath, 'rb') as f:  # Verify binary read
-                        _ = f.read()
-                else:
-                    # Download text files normally
-                    gdown.download(url, filepath, quiet=False)
-            except Exception as e:
-                st.error(f"Error downloading {filename}: {str(e)}")
-                return False
-    return True
-
-# Load model
-def verify_files():
-    required_files = ["config.json", "model.safetensors", "special_tokens_map.json", 
-                     "tokenizer_config.json", "vocab.txt"]
-    for f in required_files:
-        if not os.path.exists(f):
-            st.error(f"Missing file: {f}")
-        else:
-            st.info(f"Found {f} ({os.path.getsize(f)} bytes)")
+def download_model_files():
+    # ملفات GitHub (سيتم تحميلها مع المشروع)
+    github_files = [
+        "config.json",
+        "special_tokens_map.json",
+        "tokenizer_config.json",
+        "vocab.txt"
+    ]
+    
+    # تحميل model.safetensors من Google Drive إذا لم يكن موجوداً
+    if not os.path.exists("model.safetensors"):
+        model_url = "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
+        gdown.download(model_url, "model.safetensors", quiet=False)
 
 @st.cache_resource
 def load_model():
-    if not download_model():
-        return None, None
-
+    download_model_files()
+    
     try:
-        # First verify all files exist
-        required_files = ["config.json", "model.safetensors", 
-                        "special_tokens_map.json", "tokenizer_config.json", 
-                        "vocab.txt"]
-        missing = [f for f in required_files if not os.path.exists(f)]
-        if missing:
-            st.error(f"Missing files: {missing}")
-            return None, None
-
-        # Load tokenizer first
-        tokenizer = BertTokenizer.from_pretrained(
-            ".",
-            local_files_only=True
-        )
-
-        # Then load model with explicit config
-        config = AutoConfig.from_pretrained(".")
-        model = BertForSequenceClassification.from_pretrained(
-            ".",
-            config=config,
-            local_files_only=True
-        )
+        tokenizer = BertTokenizer.from_pretrained(".", local_files_only=True)
+        model = BertForSequenceClassification.from_pretrained(".", local_files_only=True)
         model.eval()
         return model, tokenizer
-
     except Exception as e:
-        st.error(f"Model loading failed: {str(e)}")
+        st.error(f"حدث خطأ في تحميل النموذج: {str(e)}")
         return None, None
 
 model, tokenizer = load_model()
