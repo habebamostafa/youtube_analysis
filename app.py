@@ -18,14 +18,6 @@ import os
 import shutil
 
 def download_model():
-    model_dir = "model"
-
-    # 🧹 حذف المجلد لو موجود مسبقاً (عشان نبدأ من جديد)
-    if os.path.exists(model_dir):
-        shutil.rmtree(model_dir)
-
-    os.makedirs(model_dir, exist_ok=True)
-
     files = {
         "181NGDNj-jTUY9JH5AtMW9Ez7FAiJPtqR": "config.json",
         "1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-": "model.safetensors", 
@@ -36,12 +28,13 @@ def download_model():
     }
 
     for file_id, filename in files.items():
-        filepath = os.path.join(model_dir, filename)
+        filepath = os.path.join(".", filename)  # مباشرة في نفس المسار
         if not os.path.exists(filepath):
             url = f"https://drive.google.com/uc?id={file_id}"
             gdown.download(url, filepath, quiet=False)
 
-    return model_dir
+    return "."  # المسار الحالي
+
 # Load model
 
 
