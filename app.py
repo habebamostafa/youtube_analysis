@@ -33,8 +33,8 @@ model_path = download_model()
 @st.cache_resource
 def load_model():
     download_model()
-    tokenizer = AutoTokenizer.from_pretrained("model")
-    model = AutoModelForSequenceClassification.from_pretrained("model")
+    tokenizer = AutoTokenizer.from_pretrained("youtube_sentiment_analysis")
+    model = AutoModelForSequenceClassification.from_pretrained("youtube_sentiment_analysis")
 
     model.eval()
     return model, tokenizer
