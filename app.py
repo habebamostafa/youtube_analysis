@@ -41,6 +41,10 @@ def download_model_files(language):
     light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
     for filename in light_files:
+        if language=="Arabic" : 
+            language ="ar" 
+        else :
+            language ="en" 
         src = f"{language}/{filename}"  # المسار المصدر (من مجلدات ar/ أو en/)
         dst = f"models/{language}/{filename}"  # المسار الهدف
         
