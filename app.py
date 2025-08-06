@@ -76,8 +76,8 @@ def load_model(language):
     download_model_files(language)
     
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
-        model = AutoModelForSequenceClassification.from_pretrained(model_path)
+        tokenizer = BertTokenizer.from_pretrained(model_path)
+        model = BertForSequenceClassification.from_pretrained(model_path)
         model.eval()
         return model, tokenizer
     except Exception as e:
