@@ -208,23 +208,24 @@ def get_youtube_comments(video_id, api_key=None, max_comments=100):
 
     # return comments
 
-def analyze_comments(comments):
-    """Analyze sentiment of comments"""
-    label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
-    label_map_ar = {0: "Negative", 1: "Positive", 2: "Neutral"}
+def analyze_comments(comments, language_code="english"):
+    """Analyze sentiment of comments with language support"""
+    if language_code == "arabic":
+        label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
+    else:
+        label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
 
     results = []
     for comment in comments:
-        sentiment_id, confidence = predict_sentiment(comment['text'])
+        sentiment, confidence, emoji = predict_sentiment(comment['text'], language_code)
         results.append({
             'comment': comment['text'][:100] + "..." if len(comment['text']) > 100 else comment['text'],
             'author': comment['author'],
-            'sentiment': label_map[sentiment_id],
-            'sentiment_ar': label_map_ar[sentiment_id],
+            'sentiment': sentiment,
             'confidence': confidence,
+            'emoji': emoji,
             'likes': comment['likes']
         })
-
     return results
 
 def create_visualizations(results):
