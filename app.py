@@ -34,27 +34,25 @@ st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wid
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 def download_model_files(language):
-    """نسخ الملفات الخفيفة من المجلدات المحلية + تحميل الملفات الثقيلة من Drive"""
-    # os.makedirs(f"models/{language}", exist_ok=True)
+    """إعداد ملفات النموذج حسب اللغة"""
+    # تحديد المسارات بناءً على اللغة
+    lang_code = "ar" if language == "Arabic" else "en"
+    model_dir = f"models/{lang_code}"
+    os.makedirs(model_dir, exist_ok=True)
     
     # نسخ الملفات الخفيفة من المجلدات المحلية
     light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
     for filename in light_files:
-        if language=="Arabic" : 
-            lang ="ar" 
-        else :
-            lang ="en" 
-        src = f"{lang}/{filename}"  # المسار المصدر (من مجلدات ar/ أو en/)
-        dst = f"{lang}/{filename}"  # المسار الهدف
+        src = f"{lang_code}/{filename}"
+        dst = f"{model_dir}/{filename}"
         
         if not os.path.exists(dst):
             try:
                 with open(src, 'rb') as f_src, open(dst, 'wb') as f_dst:
                     f_dst.write(f_src.read())
-                st.success(f"تم نسخ {filename} من مجلد {language}/")
             except Exception as e:
-                st.error(f"خطأ في نسخ {filename}: {str(e)}")
+                st.error(f"Error copying {filename}: {str(e)}")
 
     # تحميل model.safetensors من Google Drive
     drive_links = {
@@ -62,29 +60,29 @@ def download_model_files(language):
         "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
     }
     
-    model_path = f"models/{language}/model.safetensors"
+    model_path = f"{model_dir}/model.safetensors"
     if not os.path.exists(model_path):
         try:
-            gdown.download(drive_links[language], model_path, quiet=False)
-            st.success("تم تحميل model.safetensors من Google Drive")
+            gdown.download(drive_links[lang_code], model_path, quiet=False)
         except Exception as e:
-            st.error(f"خطأ في تحميل model.safetensors: {str(e)}")
+            st.error(f"Error downloading model.safetensors: {str(e)}")
 
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
+    lang_code = "ar" if language == "Arabic" else "en"
+    model_path = f"models/{lang_code}"
+    
     download_model_files(language)
     
-    model_path = f"models/{language}"
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_path)
         model = AutoModelForSequenceClassification.from_pretrained(model_path)
         model.eval()
         return model, tokenizer
     except Exception as e:
-        st.error(f"خطأ في تحميل النموذج: {str(e)}")
+        st.error(f"Error loading model: {str(e)}")
         return None, None
-
 
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
