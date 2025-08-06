@@ -35,7 +35,7 @@ st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 def download_model_files(language):
     """نسخ الملفات الخفيفة من المجلدات المحلية + تحميل الملفات الثقيلة من Drive"""
-    os.makedirs(f"models/{language}", exist_ok=True)
+    # os.makedirs(f"models/{language}", exist_ok=True)
     
     # نسخ الملفات الخفيفة من المجلدات المحلية
     light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
