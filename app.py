@@ -42,11 +42,11 @@ def download_model_files(language):
     
     for filename in light_files:
         if language=="Arabic" : 
-            language ="ar" 
+            lang ="ar" 
         else :
-            language ="en" 
-        src = f"{language}/{filename}"  # المسار المصدر (من مجلدات ar/ أو en/)
-        dst = f"models/{language}/{filename}"  # المسار الهدف
+            lang ="en" 
+        src = f"{lang}/{filename}"  # المسار المصدر (من مجلدات ar/ أو en/)
+        dst = f"models/{lang}/{filename}"  # المسار الهدف
         
         if not os.path.exists(dst):
             try:
