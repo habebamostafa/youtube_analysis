@@ -97,23 +97,45 @@ language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
-    """تحليل المشاعر للنص"""
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits
-        predicted_class = torch.argmax(logits, dim=1).item()
-        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-        confidence = probabilities[predicted_class].item()
+    """تحليل المشاعر للنص مع دعم متعدد اللغات"""
+    if language == "arabic":
+        # تحميل النموذج العربي (باستخدام نفس اسم الملف)
+        model_path = "./models/ar"  # المسار حيث توجد ملفات النموذج العربي
         
-        if language == "arabic":
+        # تحميل النموذج العربي مرة واحدة
+        if 'arabic_model' not in st.session_state:
+            st.session_state.arabic_model = AutoModelForSequenceClassification.from_pretrained(model_path)
+            st.session_state.arabic_tokenizer = AutoTokenizer.from_pretrained(model_path)
+        
+        # تحضير النص
+        inputs = st.session_state.arabic_tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=822)
+        
+        # التنبؤ
+        with torch.no_grad():
+            outputs = st.session_state.arabic_model(**inputs)
+            logits = outputs.logits
+            predicted_class = torch.argmax(logits, dim=1).item()
+            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+            confidence = probabilities[predicted_class].item()
+            
             label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
-        else:
+            emoji_map = {0: "🔴", 1: "🟢", 2: "🟡"}
+            
+            return label_map[predicted_class], confidence, emoji_map[predicted_class]
+    else:
+        # الكود الأصلي للنموذج الإنجليزي
+        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            predicted_class = torch.argmax(logits, dim=1).item()
+            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+            confidence = probabilities[predicted_class].item()
+            
             label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
             colors = {0: "🔴", 1: "🟢", 2: "🟡"}
             
-        return label_map[predicted_class], confidence, colors[predicted_class]
+            return label_map[predicted_class], confidence, colors[predicted_class]
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
