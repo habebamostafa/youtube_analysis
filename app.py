@@ -8,29 +8,84 @@ import torch
 import re
 from collections import Counter
 from youtube_comment_downloader import YoutubeCommentDownloader
+import gdown
+import os
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
-# Load model
-model_path = r"/content/drive/MyDrive/youtube_sentiment_analysis"
+# def download_model_files():
+#     github_files = [
+#         "en/config.json",
+#         "en/special_tokens_map.json",
+#         "en/tokenizer_config.json",
+#         "en/vocab.txt",
+#         "ar/config.json",
+#         "ar/special_tokens_map.json",
+#         "ar/tokenizer_config.json",
+#         "ar/vocab.txt",
+#     ]
+    
+#     if not os.path.exists("model.safetensors"):
+#         model_url_en = "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
+#         model_url_ar = "https://drive.google.com/uc?id=1ig3la7xbgKI0Q9iz79b2_OD5cpf_Jx-X"
+
+#         gdown.download(model_url_en, "model.safetensors", quiet=False)
+st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
+st.title("🎥 YouTube Comments Sentiment Analysis")
+st.markdown("---")
+def download_model_files(language):
+    """تحميل ملفات النموذج حسب اللغة"""
+    os.makedirs(f"models/{language}", exist_ok=True)
+    
+    model_files = {
+        "arabic": {
+            "config.json": "ar/config.json",
+            "model.safetensors": "https://drive.google.com/uc?id=1ig3la7xbgKI0Q9iz79b2_OD5cpf_Jx-X",
+            "vocab.txt": "ar/vocab.txt",
+            "special_tokens_map.json": "ar/special_tokens_map.json",
+            "tokenizer_config.json": "ar/tokenizer_config.json"
+        },
+        "english": {
+            "config.json": "en/config.json",
+            "model.safetensors": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-",
+            "vocab.txt": "en/vocab.txt",
+            "special_tokens_map.json": "en/special_tokens_map.json",
+            "tokenizer_config.json": "en/tokenizer_config.json"
+        }
+    }
+    
+    for filename, url in model_files[language].items():
+        filepath = f"models/{language}/{filename}"
+        if not os.path.exists(filepath):
+            try:
+                gdown.download(url, filepath, quiet=False)
+            except Exception as e:
+                st.error(f"Error downloading {filename}: {str(e)}")
 
 @st.cache_resource
-def load_model():
-    # Ensure model_path is a valid Hugging Face model ID or a local path
-    model = BertForSequenceClassification.from_pretrained(
-        model_path,
-        local_files_only=True ,# Explicitly specify loading from local files
-    )
-    tokenizer = BertTokenizer.from_pretrained(
-        model_path,
-        local_files_only=True # Explicitly specify loading from local files
-    )
+def load_model(language):
+    """تحميل النموذج حسب اللغة"""
+    download_model_files(language)
+    
+    try:
+        model_path = f"models/{language}"
+        if language == "arabic":
+            tokenizer = AutoTokenizer.from_pretrained(model_path)
+            model = AutoModelForSequenceClassification.from_pretrained(model_path)
+        else:
+            tokenizer = BertTokenizer.from_pretrained(model_path)
+            model = BertForSequenceClassification.from_pretrained(model_path)
+            
+        model.eval()
+        return model, tokenizer
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        return None, None
 
-    model.eval()
-    return model, tokenizer
+model_en, tokenizer_en = load_model()
 
-model, tokenizer = load_model()
-
-def predict_sentiment(text):
+def predict_sentiment(text, language):
+    """تحليل المشاعر للنص"""
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
     with torch.no_grad():
         outputs = model(**inputs)
@@ -38,20 +93,45 @@ def predict_sentiment(text):
         predicted_class = torch.argmax(logits, dim=1).item()
         probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
         confidence = probabilities[predicted_class].item()
-        return predicted_class, confidence
-
+        
+        if language == "arabic":
+            label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
+            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+        else:
+            label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
+            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+            
+        return label_map[predicted_class], confidence, colors[predicted_class]
 def extract_video_id(url):
-    """Extract video ID from YouTube URL"""
+    """استخراج معرف الفيديو من الرابط"""
     patterns = [
         r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})',
         r'youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})'
     ]
-
     for pattern in patterns:
         match = re.search(pattern, url)
         if match:
             return match.group(1)
     return None
+
+def get_comments_without_api(video_url, max_comments=100):
+    """جلب التعليقات بدون استخدام API"""
+    video_id = extract_video_id(video_url)
+    downloader = YoutubeCommentDownloader()
+    comments = []
+    try:
+        for comment in downloader.get_comments_from_url(f"https://www.youtube.com/watch?v={video_id}"):
+            comments.append({
+                'author': comment['author'],
+                'text': comment['text'],
+                'likes': int(comment['votes']),
+                'published': ''
+            })
+            if len(comments) >= max_comments:
+                break
+    except Exception as e:
+        st.error(f"Error during scraping: {str(e)}")
+    return comments
 
 def get_comments_without_api(video_url, max_comments=100):
     video_id = extract_video_id(video_url)
@@ -138,19 +218,23 @@ def analyze_comments(comments):
 def create_visualizations(results):
     """Create visualizations"""
     df = pd.DataFrame(results)
-    sentiment_counts = df['sentiment_ar'].value_counts()
-
-    # Pie chart
-    fig_pie = px.pie(
-        values=sentiment_counts.values,
-        names=sentiment_counts.index,
-        title="Sentiment Distribution",
-        color_discrete_map={
-            'Positive': '#2ecc71',
-            'Negative': '#e74c3c',
-            'Neutral': '#f39c12'
+    
+    if language == "arabic":
+        titles = {
+            'pie': "توزيع المشاعر",
+            'bar': "عدد التعليقات حسب المشاعر",
+            'hist': "توزيع مستويات الثقة"
         }
-    )
+        colors = {'إيجابي': '#2ecc71', 'سلبي': '#e74c3c', 'محايد': '#f39c12'}
+    else:
+        titles = {
+            'pie': "Sentiment Distribution",
+            'bar': "Number of Comments by Sentiment",
+            'hist': "Confidence Level Distribution"
+        }
+        colors = {'Positive': '#2ecc71', 'Negative': '#e74c3c', 'Neutral': '#f39c12'}
+    
+    
     fig_pie.update_traces(textposition='inside', textinfo='percent+label')
 
     # Bar chart
@@ -233,88 +317,95 @@ if analyze_button:
         st.error("⚠️ Please enter the YouTube video URL")
     else:
         video_id = extract_video_id(video_url)
-
         if not video_id:
             st.error("⚠️ Invalid video URL")
         else:
             with st.spinner("🔄 Fetching and analyzing comments..."):
-                comments = get_youtube_comments(video_id, max_comments)
-
+                comments = get_comments_without_api(video_url, max_comments)
+                
                 if not comments:
                     st.error("❌ No comments found or an error occurred")
                 else:
-                    results = analyze_comments(comments)
-                    fig_pie, fig_bar, fig_confidence, df = create_visualizations(results)
-
+                    results = analyze_comments(comments, language_code)
+                    fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language_code)
+                    
                     st.success(f"✅ Successfully analyzed {len(results)} comments!")
-
-                    # Quick stats
+                    
+                    # عرض الإحصائيات السريعة
                     col1, col2, col3, col4 = st.columns(4)
-                    sentiment_counts = df['sentiment_ar'].value_counts()
-
+                    sentiment_counts = df['sentiment'].value_counts()
+                    
                     with col1:
-                        positive_count = sentiment_counts.get('Positive', 0)
-                        st.metric("Positive Comments", positive_count, f"{positive_count/len(results)*100:.1f}%")
-
+                        positive = sentiment_counts.get('إيجابي' if language_code == "arabic" else 'Positive', 0)
+                        st.metric("Positive" if language == "English" else "إيجابي", 
+                                 f"{positive} ({positive/len(results):.1%})")
+                    
                     with col2:
-                        negative_count = sentiment_counts.get('Negative', 0)
-                        st.metric("Negative Comments", negative_count, f"{negative_count/len(results)*100:.1f}%")
-
+                        negative = sentiment_counts.get('سلبي' if language_code == "arabic" else 'Negative', 0)
+                        st.metric("Negative" if language == "English" else "سلبي", 
+                                 f"{negative} ({negative/len(results):.1%})")
+                    
                     with col3:
-                        neutral_count = sentiment_counts.get('Neutral', 0)
-                        st.metric("Neutral Comments", neutral_count, f"{neutral_count/len(results)*100:.1f}%")
-
+                        neutral = sentiment_counts.get('محايد' if language_code == "arabic" else 'Neutral', 0)
+                        st.metric("Neutral" if language == "English" else "محايد", 
+                                 f"{neutral} ({neutral/len(results):.1%})")
+                    
                     with col4:
-                        avg_confidence = df['confidence'].mean()
-                        st.metric("Average Confidence", f"{avg_confidence:.2%}")
-
+                        avg_conf = df['confidence'].mean()
+                        st.metric("Avg. Confidence" if language == "English" else "متوسط الثقة", 
+                                 f"{avg_conf:.2%}")
+                    
                     st.markdown("---")
-
+                    
+                    # عرض الرسوم البيانية
                     col1, col2 = st.columns(2)
                     with col1:
                         st.plotly_chart(fig_pie, use_container_width=True)
                     with col2:
                         st.plotly_chart(fig_bar, use_container_width=True)
-
-                    st.plotly_chart(fig_confidence, use_container_width=True)
-
+                    
+                    st.plotly_chart(fig_hist, use_container_width=True)
+                    
                     st.markdown("---")
                     st.subheader("📋 Comments Details")
-
+                    
+                    # تصفية النتائج
                     filter_sentiment = st.selectbox(
-                        "Filter by sentiment:",
-                        ["All"] + list(df['sentiment_ar'].unique())
+                        "Filter by sentiment:" if language == "English" else "تصفية حسب المشاعر",
+                        ["All"] + list(df['sentiment'].unique())
                     )
-
                     if filter_sentiment != "All":
-                        filtered_df = df[df['sentiment_ar'] == filter_sentiment]
+                        filtered_df = df[df['sentiment'] == filter_sentiment]
                     else:
                         filtered_df = df
-
-                    display_df = filtered_df[['author', 'comment', 'sentiment_ar', 'confidence', 'likes']].copy()
-                    display_df.columns = ['Author', 'Comment', 'Sentiment', 'Confidence Level', 'Likes']
-                    display_df['Confidence Level'] = display_df['Confidence Level'].apply(lambda x: f"{x:.2%}")
-
+                    
+                    # عرض الجدول
+                    display_cols = ['author', 'comment', 'sentiment', 'confidence', 'likes']
+                    display_df = filtered_df[display_cols].copy()
+                    display_df.columns = ['Author', 'Comment', 'Sentiment', 'Confidence', 'Likes']
+                    display_df['Confidence'] = display_df['Confidence'].apply(lambda x: f"{x:.2%}")
+                    
                     st.dataframe(
                         display_df,
                         use_container_width=True,
                         hide_index=True
                     )
-
+                    
+                    # زر التنزيل
                     csv = df.to_csv(index=False, encoding='utf-8-sig')
                     st.download_button(
                         label="📥 Download Results (CSV)",
                         data=csv,
-                        file_name=f"youtube_sentiment_analysis_{video_id}.csv",
+                        file_name=f"youtube_sentiment_{video_id}.csv",
                         mime="text/csv"
                     )
-
 else:
     st.markdown("""
     ## 📊 Features:
     - Automatic sentiment analysis of YouTube comments
+    - Support for both Arabic and English
     - Interactive visualizations
     - Detailed statistics
     - Filtering and CSV download
-    - Single comment sentiment analysis
+    - Single comment analysis
     """)
