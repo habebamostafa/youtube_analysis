@@ -282,8 +282,6 @@ def create_visualizations(results):
 # App UI
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 
-st.title("🎥 YouTube Comments Sentiment Analysis")
-st.markdown("---")
 
 # Sidebar
 st.sidebar.header("⚙️ Settings")
