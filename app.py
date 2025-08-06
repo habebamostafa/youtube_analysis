@@ -82,7 +82,17 @@ def load_model(language):
         st.error(f"Error loading model: {str(e)}")
         return None, None
 
-model_en, tokenizer_en = load_model()
+# إعدادات اللغة في الشريط الجانبي
+st.sidebar.header("🌍 Language Settings")
+language = st.sidebar.radio(
+    "Select Comment Language:",
+    ("Arabic", "English"),
+    index=0
+)
+
+# تحميل النموذج المناسب
+language_code = "arabic" if language == "Arabic" else "english"
+model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
