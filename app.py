@@ -228,7 +228,7 @@ def analyze_comments(comments, language_code="english"):
         })
     return results
 
-def create_visualizations(results,language):
+def create_visualizations(results, language):
     """Create visualizations"""
     df = pd.DataFrame(results)
     
@@ -247,39 +247,40 @@ def create_visualizations(results,language):
         }
         colors = {'Positive': '#2ecc71', 'Negative': '#e74c3c', 'Neutral': '#f39c12'}
     
+    # Calculate sentiment counts
+    sentiment_counts = df['sentiment'].value_counts()
     
+    # Pie chart
+    fig_pie = px.pie(
+        names=sentiment_counts.index,
+        values=sentiment_counts.values,
+        title=titles['pie'],
+        color=sentiment_counts.index,
+        color_discrete_map=colors
+    )
     fig_pie.update_traces(textposition='inside', textinfo='percent+label')
 
     # Bar chart
     fig_bar = px.bar(
         x=sentiment_counts.index,
         y=sentiment_counts.values,
-        title="Number of Comments by Sentiment",
+        title=titles['bar'],
         labels={'x': 'Sentiment', 'y': 'Number of Comments'},
         color=sentiment_counts.index,
-        color_discrete_map={
-            'Positive': '#2ecc71',
-            'Negative': '#e74c3c',
-            'Neutral': '#f39c12'
-        }
+        color_discrete_map=colors
     )
 
     # Confidence histogram
     fig_confidence = px.histogram(
         df,
         x='confidence',
-        color='sentiment_ar',
-        title="Confidence Level Distribution",
+        color='sentiment',
+        title=titles['hist'],
         labels={'confidence': 'Confidence Level', 'count': 'Count'},
-        color_discrete_map={
-            'Positive': '#2ecc71',
-            'Negative': '#e74c3c',
-            'Neutral': '#f39c12'
-        }
+        color_discrete_map=colors
     )
 
     return fig_pie, fig_bar, fig_confidence, df
-
 # App UI
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 
