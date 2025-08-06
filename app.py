@@ -103,9 +103,8 @@ def predict_sentiment(text, language):
         model_path = "./models/ar"  # المسار حيث توجد ملفات النموذج العربي
         
         # تحميل النموذج العربي مرة واحدة
-        if 'model.saftensors' not in st.session_state:
-            st.session_state.arabic_model = AutoModelForSequenceClassification.from_pretrained(model_path)
-            st.session_state.arabic_tokenizer = AutoTokenizer.from_pretrained(model_path)
+        st.session_state.arabic_model = AutoModelForSequenceClassification.from_pretrained(model_path)
+        st.session_state.arabic_tokenizer = AutoTokenizer.from_pretrained(model_path)
         
         # تحضير النص
         inputs = st.session_state.arabic_tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=822)
