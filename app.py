@@ -46,7 +46,7 @@ def download_model_files(language):
         else :
             lang ="en" 
         src = f"{lang}/{filename}"  # المسار المصدر (من مجلدات ar/ أو en/)
-        dst = f"models/{lang}/{filename}"  # المسار الهدف
+        dst = f"{lang}/{filename}"  # المسار الهدف
         
         if not os.path.exists(dst):
             try:
