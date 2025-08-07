@@ -53,10 +53,10 @@ def download_model_files(language):
                     f_dst.write(f_src.read())
             except Exception as e:
                 st.error(f"Error copying {filename}: {str(e)}")
-
+# https://drive.google.com/file/d/1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH/view?usp=drive_link
     # تحميل model.safetensors من Google Drive
     drive_links = {
-        "ar": "https://drive.google.com/uc?id=1ig3la7xbgKI0Q9iz79b2_OD5cpf_Jx-X",
+        "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
         "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
     }
     
@@ -126,24 +126,24 @@ def extract_video_id(url):
             return match.group(1)
     return None
 
-def get_comments_without_api(video_url, max_comments=100):
-    """جلب التعليقات بدون استخدام API"""
-    video_id = extract_video_id(video_url)
-    downloader = YoutubeCommentDownloader()
-    comments = []
-    try:
-        for comment in downloader.get_comments_from_url(f"https://www.youtube.com/watch?v={video_id}"):
-            comments.append({
-                'author': comment['author'],
-                'text': comment['text'],
-                'likes': int(comment['votes']),
-                'published': ''
-            })
-            if len(comments) >= max_comments:
-                break
-    except Exception as e:
-        st.error(f"Error during scraping: {str(e)}")
-    return comments
+# def get_comments_without_api(video_url, max_comments=100):
+#     """جلب التعليقات بدون استخدام API"""
+#     video_id = extract_video_id(video_url)
+#     downloader = YoutubeCommentDownloader()
+#     comments = []
+#     try:
+#         for comment in downloader.get_comments_from_url(f"https://www.youtube.com/watch?v={video_id}"):
+#             comments.append({
+#                 'author': comment['author'],
+#                 'text': comment['text'],
+#                 'likes': int(comment['votes']),
+#                 'published': ''
+#             })
+#             if len(comments) >= max_comments:
+#                 break
+#     except Exception as e:
+#         st.error(f"Error during scraping: {str(e)}")
+#     return comments
 
 def get_comments_without_api(video_url, max_comments=100):
     video_id = extract_video_id(video_url)
