@@ -225,9 +225,8 @@ def normalize_arabic(text):
     text = re.sub(r'[a-zA-Z]', '', text) # Remove English
     text = re.sub(r'[^\u0621-\u064A]', ' ', text) # Keep Arabic only
     text = re.sub(r'[\u061F\u060C\u061B]', '', text)
-    tokens = word_tokenize(text)
-    tokens = remove_custom_stopwords(tokens)
-    return ' '.join(tokens)
+
+    return ' '.join(text)
 
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
