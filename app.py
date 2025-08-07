@@ -11,7 +11,6 @@ from youtube_comment_downloader import YoutubeCommentDownloader
 import gdown
 import os
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from arabert.preprocess import ArabertPreprocessor
 
 
 # def download_model_files():
@@ -93,13 +92,6 @@ language = st.sidebar.radio(
     ("Arabic", "English"),
     index=0
 )
-arabert_prep = ArabertPreprocessor(model_name="models/ar")
-def clean_text(text):
-    # معالجة إضافية لتعليقات اليوتيوب
-    text = re.sub(r'http\S+', '', text)  # إزالة الروابط
-    text = re.sub(r'@\w+', '', text)  # إزالة الم提及ات
-    text = arabert_prep.preprocess(text)
-    return text.strip()
 
 # تحميل النموذج المناسب
 language_code = "arabic" if language == "Arabic" else "english"
@@ -107,12 +99,8 @@ model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
-    if language=="arabic":
-        inputs = tokenizer(clean_text(text), return_tensors="pt", truncation=True, max_length=512)
-    else:
-        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
     with torch.no_grad():
-        
         outputs = model(**inputs)
         logits = outputs.logits
         predicted_class = torch.argmax(logits, dim=1).item()
