@@ -35,12 +35,10 @@ st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
-    # تحديد المسارات بناءً على اللغة
     lang_code = "ar" if language == "Arabic" else "en"
     model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
-    # نسخ الملفات الخفيفة من المجلدات المحلية
     light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
     for filename in light_files:
@@ -53,9 +51,6 @@ def download_model_files(language):
                     f_dst.write(f_src.read())
             except Exception as e:
                 st.error(f"Error copying {filename}: {str(e)}")
-# https://drive.google.com/file/d/1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH/view?usp=drive_link
-    # تحميل model.safetensors من Google Drive
-    
     drive_links = {
         "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
         "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
