@@ -120,7 +120,7 @@ model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
     """تحليل المشاعر مع تعديل العتبة للمحايد"""
-    if language == "Arabic":
+    if language == "arabic":
         # معالجة النص العربي
         text = normalize_arabic(text)
         
