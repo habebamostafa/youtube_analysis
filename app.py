@@ -94,11 +94,18 @@ language = st.sidebar.radio(
     index=0
 )
 arabert_prep = ArabertPreprocessor(model_name="models/ar")
-def clean_text(text):
-    # معالجة إضافية لتعليقات اليوتيوب
-    text = re.sub(r'http\S+', '', text)  # إزالة الروابط
-    text = re.sub(r'@\w+', '', text)  # إزالة الم提及ات
+def clean_arabic_text(text):
+    """معالجة متقدمة للنص العربي"""
+    # التنظيف الأساسي
+    text = re.sub(r'http\S+|www\S+|@\w+|#\w+', '', text)
+    text = re.sub(r'[\U00010000-\U0010ffff]', '', text)  # إزالة الإيموجي
+    text = re.sub(r'[^\w\s\u0600-\u06FF]', ' ', text)  # إبقاء الحروف العربية فقط
+    
+    # المعالجة باستخدام AraBERT
     text = arabert_prep.preprocess(text)
+    
+    # إزالة الفراغات الزائدة
+    text = ' '.join(text.split())
     return text.strip()
 
 # تحميل النموذج المناسب
@@ -106,27 +113,44 @@ language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
-    """تحليل المشاعر للنص"""
-    if language=="arabic":
-        inputs = tokenizer(clean_text(text), return_tensors="pt", truncation=True, max_length=512)
+    """تحليل المشاعر مع تعديل العتبة للمحايد"""
+    if language == "arabic":
+        inputs = tokenizer(
+            clean_arabic_text(text),
+            return_tensors="pt",
+            truncation=True,
+            max_length=128,  # تقليل الطول لتحسين الأداء
+            padding=True
+        )
     else:
-        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        inputs = tokenizer(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=128,
+            padding=True
+        )
+    
     with torch.no_grad():
-        
         outputs = model(**inputs)
-        logits = outputs.logits
-        predicted_class = torch.argmax(logits, dim=1).item()
-        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-        confidence = probabilities[predicted_class].item()
+        probs = torch.nn.functional.softmax(outputs.logits, dim=1)[0]
         
+        # تعديل العتبة للحد من التحيز للمحايد
         if language == "arabic":
-            label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
-        else:
-            label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+            if probs[1] < 0.65:  # إذا كانت ثقة المحايد أقل من 65%
+                final_pred = torch.argmax(probs * torch.tensor([1.2, 1.0, 1.2]))  # تقليل وزن المحايد
+            else:
+                final_pred = torch.argmax(probs)
             
-        return label_map[predicted_class], confidence, colors[predicted_class]
+            label_map = {0: "سلبي", 1: "محايد", 2: "إيجابي"}
+            colors = {0: "🔴", 1: "🟡", 2: "🟢"}
+        else:
+            final_pred = torch.argmax(probs)
+            label_map = {0: "Negative", 1: "Neutral", 2: "Positive"}
+            colors = {0: "🔴", 1: "🟡", 2: "🟢"}
+        
+        return label_map[final_pred.item()], probs[final_pred].item(), colors[final_pred.item()]
+    
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
@@ -297,7 +321,15 @@ def create_visualizations(results, language):
 # App UI
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 
+test_samples = [
+    ("الفيلم رائع وممتع", "إيجابي"),
+    ("سيء جداً ولا أنصح به", "سلبي"),
+    ("شاهدت الفيلم البارحة", "محايد")
+]
 
+for text, expected in test_samples:
+    pred, conf, _ = predict_sentiment(text, "arabic")
+    st.write(f"النص: {text} | المتوقع: {expected} | النتيجة: {pred} | الثقة: {conf:.2%}")
 # Sidebar
 st.sidebar.header("⚙️ Settings")
 
