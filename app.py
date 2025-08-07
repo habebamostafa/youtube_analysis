@@ -55,6 +55,7 @@ def download_model_files(language):
                 st.error(f"Error copying {filename}: {str(e)}")
 # https://drive.google.com/file/d/1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH/view?usp=drive_link
     # تحميل model.safetensors من Google Drive
+    
     drive_links = {
         "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
         "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
