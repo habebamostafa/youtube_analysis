@@ -11,6 +11,7 @@ from youtube_comment_downloader import YoutubeCommentDownloader
 import gdown
 import os
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import pipeline
 
 
 # def download_model_files():
@@ -71,18 +72,33 @@ def download_model_files(language):
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
     lang_code = "ar" if language == "Arabic" else "en"
-    model_path = f"models/{lang_code}"
-    
-    download_model_files(language)
-    
+    model_path = f"models/{lang_code}"  # المسار المحلي
+
+    download_model_files(language)  # تأكد من وجود الموديلات محليًا
+
     try:
-        tokenizer = BertTokenizer.from_pretrained(model_path)
-        model = BertForSequenceClassification.from_pretrained(model_path)
+        # ✳️ لو عربي نستخدم BERT، لو إنجليزي نستخدم DistilBERT أو أي موديل عندك
+        if language == "Arabic":
+            tokenizer = BertTokenizer.from_pretrained(model_path)
+            model = BertForSequenceClassification.from_pretrained(model_path)
+        else:  # English
+            tokenizer = BertTokenizer.from_pretrained(model_path)
+            model = BertForSequenceClassification.from_pretrained(model_path)
+
         model.eval()
-        return model, tokenizer
+
+        # ✅ نرجع الـ pipeline مباشرة
+        nlp_pipeline = pipeline(
+            "text-classification",
+            model=model,
+            tokenizer=tokenizer,
+            return_all_scores=True,
+        )
+        return nlp_pipeline
+
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
-        return None, None
+        return None
 
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
@@ -91,29 +107,43 @@ language = st.sidebar.radio(
     ("Arabic", "English"),
     index=0
 )
-
+arabic_sentiment_pipeline = None
+tokenizer = None
+model = None
 # تحميل النموذج المناسب
 language_code = "arabic" if language == "Arabic" else "english"
-model, tokenizer = load_model(language_code)
-
+if language_code == "arabic":
+    arabic_sentiment_pipeline = load_model("Arabic")
+else:
+    model, tokenizer = load_model("Englis")
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits
-        predicted_class = torch.argmax(logits, dim=1).item()
-        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-        confidence = probabilities[predicted_class].item()
-        
-        if language == "arabic":
-            label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
-        else:
+    
+    if language == "arabic":
+        result = arabic_sentiment_pipeline(text)[0]
+        label_map = {
+            "POS": ("إيجابي", "🟢"),
+            "NEG": ("سلبي", "🔴"),
+            "NEU": ("محايد", "🟡")
+        }
+        label, color = label_map.get(result["label"], ("غير معروف", "⚪"))
+        confidence = result["score"]
+        return label, confidence, color
+
+    else:
+        # English or other model
+        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            predicted_class = torch.argmax(logits, dim=1).item()
+            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+            confidence = probabilities[predicted_class].item()
+
             label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
             colors = {0: "🔴", 1: "🟢", 2: "🟡"}
-            
-        return label_map[predicted_class], confidence, colors[predicted_class]
+            return label_map[predicted_class], confidence, colors[predicted_class]
+        
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
