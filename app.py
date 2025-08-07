@@ -107,10 +107,11 @@ model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    if language=="arabic":
+        inputs = tokenizer(clean_text(text), return_tensors="pt", truncation=True, max_length=512)
+    else:
+        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
     with torch.no_grad():
-        if language=="Arabic":
-            inputs = tokenizer(clean_text(text), return_tensors="pt", truncation=True, max_length=128)
         
         outputs = model(**inputs)
         logits = outputs.logits
