@@ -12,14 +12,8 @@ import gdown
 import os
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from arabert.preprocess import ArabertPreprocessor
-from pyarabic.araby import strip_tashkeel, strip_diacritics
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-import emoji
 
-nltk.download('punkt_tab')
-nltk.download('stopwords')
+
 # def download_model_files():
 #     github_files = [
 #         "en/config.json",
@@ -117,102 +111,18 @@ def clean_arabic_text(text):
 # تحميل النموذج المناسب
 language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language_code)
-def convert_emojis(text):
-    """Convert emojis to Arabic text"""
-    text = emoji.demojize(text, language='en')
-    emoji_translations = {
-        "face_with_tears_of_joy": "ضحك",
-        "red_heart": "حب",
-        "angry_face": "غضب",
-        "crying_face": "حزن",
-        "smiling_face_with_smiling_eyes": "سعادة",
-        "thumbs_up": "اعجاب",
-        "clapping_hands": "تصفيق",
-        "fire": "رائع",
-        "😂": "ضحك", "❤": "حب", "😍": "حب",
-        "😊": "سعادة", "👍": "موافقة", "😢": "حزن",
-        "👏": "تصفيق", "🔥": "رائع", "😠": "غضب"
-    }
-
-    for emoji_code, arabic_word in emoji_translations.items():
-        text = text.replace(f":{emoji_code}:", arabic_word)
-    return text
-
-def has_emoji(text):
-    """Check if text contains emojis"""
-    emoji_pattern = re.compile("["
-        u"\U0001F600-\U0001F64F"  # Emoticons
-        u"\U0001F300-\U0001F5FF"  # Symbols & Pictographs
-        u"\U0001F680-\U0001F6FF"  # Transport & Map
-        u"\U0001F1E0-\U0001F1FF"  # Flags (iOS)
-        u"\U00002500-\U00002BEF"  # Chinese/Japanese/Korean
-        u"\U00002702-\U000027B0"
-        u"\U00002702-\U000027B0"
-        u"\U000024C2-\U0001F251"
-        u"\U0001f926-\U0001f937"
-        u"\U00010000-\U0010ffff"
-        "]+", flags=re.UNICODE)
-    return bool(emoji_pattern.search(text))
-
-# Arabic stopwords handling
-arabic_stopwords = set(stopwords.words("arabic"))
-keep_words = {'لا', 'لم', 'لن', 'ما', 'مش', 'ليس', 'بدون', 'غير', 'إن', 'إذ', 'إذا'}
-custom_stopwords = arabic_stopwords - keep_words
-
-def remove_custom_stopwords(tokens):
-    """Remove custom stopwords"""
-    return [word for word in tokens if word not in custom_stopwords]
-
-def normalize_arabic(text):
-    """Advanced Arabic text normalization"""
-    if has_emoji(text):
-        text = convert_emojis(text)
-    
-    # Basic cleaning
-    text = re.sub(r'http\S+|www\S+|@\w+|#\w+', '', text)
-    text = re.sub(r'[^\u0600-\u06FF\s]', '', text)  # Remove non-Arabic
-    
-    # Character normalization
-    text = re.sub(r'[إأآا]', 'ا', text)
-    text = re.sub(r'ى', 'ي', text)
-    text = re.sub(r'ؤ', 'ء', text)
-    text = re.sub(r'ئ', 'ء', text)
-    text = re.sub(r'ة', 'ه', text)
-    
-    # Dialect handling
-    text = re.sub(r'\bمش\b', 'ليس', text)
-    text = re.sub(r'\bمو\b', 'ليس', text)
-    text = re.sub(r'\bما (\w+)', r'ليس \1', text)
-    text = re.sub(r'\b(\w+)ش\b', r'\1', text)
-    
-    # Remove diacritics and punctuation
-    text = strip_tashkeel(text)
-    text = strip_diacritics(text)
-    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
-    text = re.sub(r'\d+', '', text)      # Remove digits
-    text = re.sub(r'[a-zA-Z]', '', text) # Remove English
-    text = re.sub(r'[^\u0621-\u064A]', ' ', text) # Keep Arabic only
-    text = re.sub(r'[\u061F\u060C\u061B]', '', text)
-    
-    # Tokenization and stopword removal
-    tokens = word_tokenize(text)
-    tokens = remove_custom_stopwords(tokens)
-    
-    return ' '.join(tokens)
-
-def clean_english_text(text):
-    """Clean English text"""
-    text = re.sub(r'http\S+|www\S+|@\w+|#\w+', '', text)
-    text = re.sub(r'[^\w\s]', ' ', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text.lower()
 
 def predict_sentiment(text, language):
-    """Predict sentiment with threshold adjustment for neutral"""
-    if language == "Arabic":
-        # Arabic text processing
-        text = normalize_arabic(text)
-        
+    """تحليل المشاعر مع تعديل العتبة للمحايد"""
+    if language == "arabic":
+        inputs = tokenizer(
+            clean_arabic_text(text),
+            return_tensors="pt",
+            truncation=True,
+            max_length=128,  # تقليل الطول لتحسين الأداء
+            padding=True
+        )
+    else:
         inputs = tokenizer(
             text,
             return_tensors="pt",
@@ -220,41 +130,27 @@ def predict_sentiment(text, language):
             max_length=128,
             padding=True
         )
+    
+    with torch.no_grad():
+        outputs = model(**inputs)
+        probs = torch.nn.functional.softmax(outputs.logits, dim=1)[0]
         
-        with torch.no_grad():
-            outputs = model(**inputs)
-            probs = torch.nn.functional.softmax(outputs.logits, dim=1)[0]
-            
-            # Adjust threshold for neutral class
-            if probs[1] < 0.65:  # If neutral confidence < 65%
-                final_pred = torch.argmax(probs * torch.tensor([1.2, 1.0, 1.2]))  # Reduce neutral weight
+        # تعديل العتبة للحد من التحيز للمحايد
+        if language == "arabic":
+            if probs[1] < 0.65:  # إذا كانت ثقة المحايد أقل من 65%
+                final_pred = torch.argmax(probs * torch.tensor([1.2, 1.0, 1.2]))  # تقليل وزن المحايد
             else:
                 final_pred = torch.argmax(probs)
             
             label_map = {0: "سلبي", 1: "محايد", 2: "إيجابي"}
             colors = {0: "🔴", 1: "🟡", 2: "🟢"}
-    else:
-        # English text processing
-        text = clean_english_text(text)
-        
-        inputs = tokenizer(
-            text,
-            return_tensors="pt",
-            truncation=True,
-            max_length=128,
-            padding=True
-        )
-        
-        with torch.no_grad():
-            outputs = model(**inputs)
-            probs = torch.nn.functional.softmax(outputs.logits, dim=1)[0]
+        else:
             final_pred = torch.argmax(probs)
             label_map = {0: "Negative", 1: "Neutral", 2: "Positive"}
             colors = {0: "🔴", 1: "🟡", 2: "🟢"}
+        
+        return label_map[final_pred.item()], probs[final_pred].item(), colors[final_pred.item()]
     
-    return label_map[final_pred.item()], probs[final_pred].item(), colors[final_pred.item()]
-
-
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
@@ -428,17 +324,12 @@ st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wid
 test_samples = [
     ("الفيلم رائع وممتع", "إيجابي"),
     ("سيء جداً ولا أنصح به", "سلبي"),
-    ("شاهدت الفيلم البارحة", "محايد"),
-    ("This movie is amazing!", "Positive"),
-    ("Terrible movie, don't watch it", "Negative"),
-    ("I watched the movie yesterday", "Neutral")
+    ("شاهدت الفيلم البارحة", "محايد")
 ]
 
-st.subheader("🧪 Model Test Samples")
 for text, expected in test_samples:
-    lang = "Arabic" if any(char in text for char in "اأإآبتثجحخدذرزسشصضطظعغفقكلمنهوي") else "English"
-    pred, conf, emoji_icon = predict_sentiment(text, lang.lower())
-    st.write(f"{emoji_icon} Text: {text} | Expected: {expected} | Result: {pred} | Confidence: {conf:.2%}")
+    pred, conf, _ = predict_sentiment(text, "arabic")
+    st.write(f"النص: {text} | المتوقع: {expected} | النتيجة: {pred} | الثقة: {conf:.2%}")
 # Sidebar
 st.sidebar.header("⚙️ Settings")
 
