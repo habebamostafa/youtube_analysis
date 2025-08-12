@@ -106,9 +106,9 @@ def predict_sentiment(text, language):
     )
     with torch.no_grad():
         outputs = model(**inputs)
-        logits = outputs.logits
-        predicted_class = torch.argmax(logits, dim=1).item()
-        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+        probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
+        predicted_class = torch.argmax(probs, dim=1).item()
+        # probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
         confidence = probabilities[predicted_class].item()
         
         if language.lower() == "arabic":
