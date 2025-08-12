@@ -42,7 +42,7 @@ drive_links = {
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
     lang_code = "ar" if language == "arabic" else "en"
-    model_dir = f"models/{lang_code}"
+    model_dir = f"{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
 
@@ -70,13 +70,13 @@ def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
     # lang_code = "ar" if language == "arabic" else "en"
     model_paths = {
-        "english": "models/en",
-        "arabic": "models/ar"
+        "english": "en",
+        "arabic": "ar"
     }
     path = model_paths.get(language)
     if not path:
         raise ValueError(f"Model path for language '{language}' not found.")
-    
+        
     try:
         tokenizer = BertTokenizer.from_pretrained(path)
         model = BertForSequenceClassification.from_pretrained(path)
@@ -107,7 +107,7 @@ def predict_sentiment(text, language):
     with torch.no_grad():
         outputs = model(**inputs)
         probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
-        predicted_class = torch.argmax(probs, dim=1).item()
+        predicted_class = torch.argmax(probabilities, dim=1).item()
         # probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
         confidence = probabilities[predicted_class].item()
         
