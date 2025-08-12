@@ -68,7 +68,7 @@ def download_model_files(language):
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
-    lang_code = "ar" if language == "Arabic" else "en"
+    lang_code = "ar" if language == "arabic" else "en"
     model_path = f"models/{lang_code}"
     
     with st.spinner("Downloading model files..."):
