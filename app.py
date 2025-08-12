@@ -35,7 +35,7 @@ st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
-    lang_code = "ar" if language == "arabic" else "en"
+    lang_code = "ar" if language == "Arabic" else "en"
     model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
@@ -66,7 +66,7 @@ def download_model_files(language):
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
-    lang_code = "ar" if language == "arabic" else "en"
+    lang_code = "ar" if language == "Arabic" else "en"
     model_path = f"models/{lang_code}"
     
     download_model_files(language)
@@ -90,7 +90,7 @@ language = st.sidebar.radio(
 
 # تحميل النموذج المناسب
 language_code = "arabic" if language == "Arabic" else "english"
-model, tokenizer = load_model(language_code)
+model, tokenizer = load_model(language)
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
