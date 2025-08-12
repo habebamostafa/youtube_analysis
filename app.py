@@ -86,32 +86,53 @@ def download_model_weights(language):
             return False
     return True
 
+# Update the load_model function to include better error handling
 @st.cache_resource
 def load_model(language):
-    """تحميل النموذج النهائي"""
+    """تحميل النموذج النهائي مع معالجة الأخطاء المحسنة"""
     lang_code = "ar" if language == "arabic" else "en"
     model_dir = f"models/{lang_code}"
     
-    # 1. نسخ الملفات الأساسية
-    if not copy_model_files(language):
-        st.error("فشل في تحضير ملفات النموذج")
+    # 1. التحقق من وجود جميع الملفات المطلوبة
+    required_files = [
+        "config.json",
+        "special_tokens_map.json",
+        "tokenizer_config.json",
+        "vocab.txt",
+        "model.safetensors"
+    ]
+    
+    missing_files = [f for f in required_files if not os.path.exists(f"{model_dir}/{f}")]
+    if missing_files:
+        st.error(f"الملفات المفقودة: {', '.join(missing_files)}")
         return None, None
     
-    # 2. تنزيل الأوزان
-    if not download_model_weights(language):
-        st.error("فشل في تحميل أوزان النموذج")
-        return None, None
-    
-    # 3. تحميل النموذج
+    # 2. تحميل النموذج مع معالجة الأخطاء
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_dir)
-        model = AutoModelForSequenceClassification.from_pretrained(model_dir)
+        # تحميل tokenizer مع إعدادات خاصة للغة العربية
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_dir,
+            use_fast=True,
+            do_lower_case=False if lang_code == "ar" else True
+        )
+        
+        # تحميل النموذج مع التحقق من التوافق
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_dir,
+            num_labels=3  # تأكيد أن النموذج متوقع لثلاث فئات
+        )
         model.eval()
+        
+        # اختبار تشغيل النموذج
+        test_input = tokenizer("اختبار", return_tensors="pt")
+        with torch.no_grad():
+            model(**test_input)
+            
         return model, tokenizer
+        
     except Exception as e:
-        st.error(f"خطأ في تحميل النموذج: {str(e)}")
-        return None, None
-
+        st.error(f"فشل تحميل النموذج: {str(e)}")
+        
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
@@ -125,23 +146,45 @@ language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
-    """تحليل المشاعر للنص"""
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits
-        predicted_class = torch.argmax(logits, dim=1).item()
-        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-        confidence = probabilities[predicted_class].item()
+    """تحليل المشاعر مع معالجة الأخطاء المحسنة"""
+    if not text.strip():
+        return "محايد", 0.0, "🟡" if language == "arabic" else "Neutral", 0.0, "🟡"
+    
+    try:
+        inputs = tokenizer(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            padding=True,
+            max_length=512,
+            add_special_tokens=True
+        )
         
-        if language == "arabic":
-            label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
-        else:
-            label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            probs = torch.nn.functional.softmax(logits, dim=1)
+            confidence, predicted_class = torch.max(probs, dim=1)
             
-        return label_map[predicted_class], confidence, colors[predicted_class]
+            label_map = {
+                "arabic": {0: "سلبي", 1: "إيجابي", 2: "محايد"},
+                "english": {0: "Negative", 1: "Positive", 2: "Neutral"}
+            }
+            color_map = {0: "🔴", 1: "🟢", 2: "🟡"}
+            
+            return (
+                label_map[language][predicted_class.item()],
+                confidence.item(),
+                color_map[predicted_class.item()]
+            )
+            
+    except Exception as e:
+        st.error(f"خطأ في تحليل النص: {str(e)}")
+        return (
+            "محايد" if language == "arabic" else "Neutral",
+            0.0,
+            "🟡"
+        )
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
