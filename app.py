@@ -65,7 +65,10 @@ def download_model_files(language):
             gdown.download(drive_links[lang_code], model_path, quiet=False)
         except Exception as e:
             st.error(f"Error downloading model.safetensors: {str(e)}")
-
+if st.sidebar.button("Clear Model Cache"):
+    import shutil
+    shutil.rmtree("models", ignore_errors=True)
+    st.success("Cache cleared. Please restart the app.")
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
