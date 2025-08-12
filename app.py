@@ -42,7 +42,7 @@ drive_links = {
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
     lang_code = "ar" if language == "arabic" else "en"
-    model_dir = f"{lang_code}"
+    model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
 
@@ -70,8 +70,8 @@ def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
     # lang_code = "ar" if language == "arabic" else "en"
     model_paths = {
-        "english": "en",
-        "arabic": "ar"
+        "english": "models/en",
+        "arabic": "models/ar"
     }
     path = model_paths.get(language)
     
