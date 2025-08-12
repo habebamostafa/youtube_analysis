@@ -33,10 +33,9 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
-@st.cache_resource
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
-    lang_code = "ar" if language == "arabic" else "en"
+    lang_code = "ar" if language == "Arabic" else "en"
     model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
@@ -56,28 +55,22 @@ def download_model_files(language):
         "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
         "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
     }
-    # https://drive.google.com/file/d/1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH/view?usp=sharing
-    #https://drive.google.com/file/d/1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-/view?usp=drive_link
-    # https://drive.google.com/file/d/1ElMOLoZRd7002NWfHEWbrHU7UpALral_/view?usp=drive_link
+    
     model_path = f"{model_dir}/model.safetensors"
     if not os.path.exists(model_path):
         try:
             gdown.download(drive_links[lang_code], model_path, quiet=False)
         except Exception as e:
             st.error(f"Error downloading model.safetensors: {str(e)}")
-if st.sidebar.button("Clear Model Cache"):
-    import shutil
-    shutil.rmtree("models", ignore_errors=True)
-    st.success("Cache cleared. Please restart the app.")
+
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
-    lang_code = "ar" if language == "arabic" else "en"
+    lang_code = "ar" if language == "Arabic" else "en"
     model_path = f"models/{lang_code}"
     
-    if not download_model_files(language):
-        st.error(f"Failed to download model files:{language}")
-        return None, None
+    download_model_files(language)
+    
     try:
         tokenizer = BertTokenizer.from_pretrained(model_path)
         model = BertForSequenceClassification.from_pretrained(model_path)
