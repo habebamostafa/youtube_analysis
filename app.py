@@ -33,14 +33,19 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
+light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
+drive_links = {
+        "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
+        "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
+    }
+@st.cache_resource
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
     lang_code = "ar" if language == "Arabic" else "en"
     model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
-    light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
-    
+
     for filename in light_files:
         src = f"{lang_code}/{filename}"
         dst = f"{model_dir}/{filename}"
@@ -51,10 +56,7 @@ def download_model_files(language):
                     f_dst.write(f_src.read())
             except Exception as e:
                 st.error(f"Error copying {filename}: {str(e)}")
-    drive_links = {
-        "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
-        "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
-    }
+
     
     model_path = f"{model_dir}/model.safetensors"
     if not os.path.exists(model_path):
@@ -69,7 +71,10 @@ def load_model(language):
     lang_code = "ar" if language == "Arabic" else "en"
     model_path = f"models/{lang_code}"
     
-    download_model_files(language)
+    with st.spinner("Downloading model files..."):
+        download_model_files(language)
+        st.success("Model loaded successfully!")
+
     
     try:
         tokenizer = BertTokenizer.from_pretrained(model_path)
