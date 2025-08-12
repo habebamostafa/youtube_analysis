@@ -30,6 +30,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 #         model_url_ar = "https://drive.google.com/uc?id=1ig3la7xbgKI0Q9iz79b2_OD5cpf_Jx-X"
 
 #         gdown.download(model_url_en, "model.safetensors", quiet=False)
+import shutil
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
@@ -39,30 +40,36 @@ def download_model_files(language):
     model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
-    light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
+    # نسخ ملفات التكوين
+    config_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
-    for filename in light_files:
-        src = f"{lang_code}/{filename}"
-        dst = f"{model_dir}/{filename}"
+    for filename in config_files:
+        src_path = f"{lang_code}/{filename}"
+        dst_path = f"{model_dir}/{filename}"
         
-        if not os.path.exists(dst):
+        if not os.path.exists(dst_path):
             try:
-                with open(src, 'rb') as f_src, open(dst, 'wb') as f_dst:
-                    f_dst.write(f_src.read())
+                shutil.copyfile(src_path, dst_path)
             except Exception as e:
-                st.error(f"Error copying {filename}: {str(e)}")
-    drive_links = {
-        "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
-        "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
+                st.error(f"خطأ في نسخ {filename}: {str(e)}")
+
+    # تحميل ملف النموذج
+    model_files = {
+        "ar": {
+            "url": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
+            "dest": f"{model_dir}/pytorch_model.bin"
+        },
+        "en": {
+            "url": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-",
+            "dest": f"{model_dir}/pytorch_model.bin"
+        }
     }
     
-    model_path = f"{model_dir}/model.safetensors"
-    if not os.path.exists(model_path):
+    if not os.path.exists(model_files[lang_code]["dest"]):
         try:
-            gdown.download(drive_links[lang_code], model_path, quiet=False)
+            gdown.download(model_files[lang_code]["url"], model_files[lang_code]["dest"], quiet=False)
         except Exception as e:
-            st.error(f"Error downloading model.safetensors: {str(e)}")
-
+            st.error(f"خطأ في تحميل النموذج: {str(e)}")
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
