@@ -88,41 +88,33 @@ def download_model_weights(language):
 
 # Update the load_model function to include better error handling
 @st.cache_resource
-@st.cache_resource
 def load_model(language):
     lang_code = "ar" if language == "arabic" else "en"
     model_dir = f"models/{lang_code}"
     
     try:
-        # تحميل Tokenizer
+        # تحميل Tokenizer مع معالجة خاصة للعربية
         tokenizer = AutoTokenizer.from_pretrained(
             model_dir,
             use_fast=True,
-            do_lower_case=False if lang_code == "ar" else True
+            do_lower_case=False
         )
         
-        # تحميل النموذج
+        # تحميل النموذج مع التأكد من توافق المفردات
         model = AutoModelForSequenceClassification.from_pretrained(
             model_dir,
             num_labels=3
         )
-        model.eval()
         
-        # اختبار توافق Tokenizer والنموذج
-        if model.config.vocab_size != tokenizer.vocab_size:
-            st.error("تعارض في حجم المفردات بين النموذج و Tokenizer!")
+        # فحص التوافق الحرج
+        if tokenizer.vocab_size != model.config.vocab_size:
+            st.error(f"تعارض في المفردات: Tokenizer={tokenizer.vocab_size}, Model={model.config.vocab_size}")
             return None, None
-        
-        # اختبار تشغيل النموذج
-        test_text = "هذا اختبار" if lang_code == "ar" else "This is a test"
-        test_input = tokenizer(test_text, return_tensors="pt", truncation=True, padding=True)
-        with torch.no_grad():
-            model(**test_input)  # إذا لم يحدث خطأ، النموذج يعمل
             
         return model, tokenizer
         
     except Exception as e:
-        st.error(f"فشل تحميل النموذج: {str(e)}")
+        st.error(f"خطأ في التحميل: {str(e)}")
         return None, None
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
