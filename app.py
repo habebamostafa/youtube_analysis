@@ -42,7 +42,7 @@ drive_links = {
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
     lang_code = "ar" if language == "arabic" else "en"
-    model_dir = f"{lang_code}"
+    model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
 
@@ -64,19 +64,17 @@ def download_model_files(language):
             gdown.download(drive_links[lang_code], model_path, quiet=False)
         except Exception as e:
             st.error(f"Error downloading model.safetensors: {str(e)}")
-download_model_files("arabic")
+
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
     # lang_code = "ar" if language == "arabic" else "en"
     model_paths = {
-        "english": "en",
-        "arabic": "ar"
+        "english": "models/en",
+        "arabic": "models/ar"
     }
     path = model_paths.get(language)
-    if not path:
-        raise ValueError(f"Model path for language '{language}' not found.")
-        
+    
     try:
         tokenizer = BertTokenizer.from_pretrained(path)
         model = BertForSequenceClassification.from_pretrained(path)
@@ -88,7 +86,7 @@ def load_model(language):
 
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
-language = st.selectbox("اختر اللغة:", ["english", "arabic"])
+language = st.selectbox("اختر اللغة:", ["English", "Arabic"])
 
 
 # تحميل النموذج المناسب
@@ -106,9 +104,9 @@ def predict_sentiment(text, language):
     )
     with torch.no_grad():
         outputs = model(**inputs)
-        probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
-        predicted_class = torch.argmax(probabilities, dim=1).item()
-        # probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+        logits = outputs.logits
+        predicted_class = torch.argmax(logits, dim=1).item()
+        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
         confidence = probabilities[predicted_class].item()
         
         if language.lower() == "arabic":
