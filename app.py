@@ -33,113 +33,53 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
-os.makedirs("models/ar", exist_ok=True)
-os.makedirs("models/en", exist_ok=True)
-
-def copy_model_files(language):
-    """نسخ ملفات النموذج من المجلدات المحلية إلى models/"""
+def download_model_files(language):
+    """إعداد ملفات النموذج حسب اللغة"""
     lang_code = "ar" if language == "arabic" else "en"
-    src_dir = lang_code  # المجلد المصدر (ar أو en)
-    dst_dir = f"models/{lang_code}"  # المجلد الهدف
+    model_dir = f"models/{lang_code}"
+    os.makedirs(model_dir, exist_ok=True)
     
-    required_files = [
-        "config.json",
-        "special_tokens_map.json",
-        "tokenizer_config.json",
-        "vocab.txt"
-    ]
+    light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
-    for filename in required_files:
-        src_path = os.path.join(src_dir, filename)
-        dst_path = os.path.join(dst_dir, filename)
+    for filename in light_files:
+        src = f"{lang_code}/{filename}"
+        dst = f"{model_dir}/{filename}"
         
-        if not os.path.exists(src_path):
-            st.error(f"الملف {src_path} غير موجود!")
-            return False
-            
-        if not os.path.exists(dst_path):
+        if not os.path.exists(dst):
             try:
-                with open(src_path, 'rb') as f_src, open(dst_path, 'wb') as f_dst:
+                with open(src, 'rb') as f_src, open(dst, 'wb') as f_dst:
                     f_dst.write(f_src.read())
             except Exception as e:
-                st.error(f"خطأ في نسخ {filename}: {str(e)}")
-                return False
-    return True
-
-def download_model_weights(language):
-    """تنزيل أوزان النموذج فقط"""
-    lang_code = "ar" if language == "arabic" else "en"
-    model_path = f"{lang_code}"
+                st.error(f"Error copying {filename}: {str(e)}")
+    drive_links = {
+        "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
+        "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
+    }
     
+    model_path = f"{model_dir}/model.safetensors"
     if not os.path.exists(model_path):
-        drive_links = {
-            "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
-            "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
-        }
-        
         try:
-            with st.spinner(f"جاري تنزيل أوزان النموذج للغة {language}..."):
-                gdown.download(drive_links[lang_code], model_path, quiet=False)
-            return os.path.exists(model_path)
+            gdown.download(drive_links[lang_code], model_path, quiet=False)
         except Exception as e:
-            st.error(f"خطأ في تنزيل الأوزان: {str(e)}")
-            return False
-    return True
+            st.error(f"Error downloading model.safetensors: {str(e)}")
 
-# Update the load_model function to include better error handling
 @st.cache_resource
 def load_model(language):
-    """تحميل النموذج النهائي مع معالجة الأخطاء المحسنة"""
-    lang_code = "ar" if language == "arabic" else "en"
-    model_dir = f"{lang_code}"
+    """تحميل النموذج من المجلد المحلي"""
+    lang_code = "ar" if language == "Arabic" else "en"
+    model_path = f"models/{lang_code}"
     
-    # 1. التحقق من وجود جميع الملفات المطلوبة
-    if lang_code=="ar":
-        required_files = [
-            "config.json",
-            "special_tokens_map.json",
-            "tokenizer_config.json",
-            "tokenizer.json",            
-            "vocab.txt",
-        ]
-    else:
-        required_files = [
-            "config.json",
-            "special_tokens_map.json",
-            "tokenizer_config.json",
-            "vocab.txt",
-        ]  
-    missing_files = [f for f in required_files if not os.path.exists(f"{model_dir}/{f}")]
-    if missing_files:
-        st.error(f"الملفات المفقودة: {', '.join(missing_files)}")
-        return None, None
+    download_model_files(language)
     
-    # 2. تحميل النموذج مع معالجة الأخطاء
     try:
-        # تحميل tokenizer مع إعدادات خاصة للغة العربية
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_dir,
-            use_fast=True,
-            do_lower_case=False if lang_code == "ar" else True
-        )
-        
-        # تحميل النموذج مع التحقق من التوافق
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_dir,
-            num_labels=3  # تأكيد أن النموذج متوقع لثلاث فئات
-        )
+        tokenizer = BertTokenizer.from_pretrained(model_path)
+        model = BertForSequenceClassification.from_pretrained(model_path)
         model.eval()
-        
-        # اختبار تشغيل النموذج
-        test_input = tokenizer("اختبار", return_tensors="pt")
-        with torch.no_grad():
-            model(**test_input)
-            
         return model, tokenizer
-        
     except Exception as e:
-        st.error(f"فشل تحميل النموذج: {str(e)}")
-        
+        st.error(f"Error loading model: {str(e)}")
+        return None, None
+
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
@@ -153,45 +93,23 @@ language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
-    """تحليل المشاعر مع معالجة الأخطاء المحسنة"""
-    if not text.strip():
-        return "محايد", 0.0, "🟡" if language == "arabic" else "Neutral", 0.0, "🟡"
-    
-    try:
-        inputs = tokenizer(
-            text,
-            return_tensors="pt",
-            truncation=True,
-            padding=True,
-            max_length=512,
-            add_special_tokens=True
-        )
+    """تحليل المشاعر للنص"""
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits
+        predicted_class = torch.argmax(logits, dim=1).item()
+        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+        confidence = probabilities[predicted_class].item()
         
-        with torch.no_grad():
-            outputs = model(**inputs)
-            logits = outputs.logits
-            probs = torch.nn.functional.softmax(logits, dim=1)
-            confidence, predicted_class = torch.max(probs, dim=1)
+        if language == "arabic":
+            label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
+            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+        else:
+            label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
+            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
             
-            label_map = {
-                "arabic": {0: "سلبي", 1: "إيجابي", 2: "محايد"},
-                "english": {0: "Negative", 1: "Positive", 2: "Neutral"}
-            }
-            color_map = {0: "🔴", 1: "🟢", 2: "🟡"}
-            
-            return (
-                label_map[language][predicted_class.item()],
-                confidence.item(),
-                color_map[predicted_class.item()]
-            )
-            
-    except Exception as e:
-        st.error(f"خطأ في تحليل النص: {str(e)}")
-        return (
-            "محايد" if language == "arabic" else "Neutral",
-            0.0,
-            "🟡"
-        )
+        return label_map[predicted_class], confidence, colors[predicted_class]
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
