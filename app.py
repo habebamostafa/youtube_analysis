@@ -334,8 +334,8 @@ if analyze_button:
                 if not comments:
                     st.error("❌ No comments found or an error occurred")
                 else:
-                    results = analyze_comments(comments, language_code)
-                    fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language_code)
+                    results = analyze_comments(comments, language)
+                    fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language)
                     
                     st.success(f"✅ Successfully analyzed {len(results)} comments!")
                     
@@ -344,17 +344,17 @@ if analyze_button:
                     sentiment_counts = df['sentiment'].value_counts()
                     
                     with col1:
-                        positive = sentiment_counts.get('إيجابي' if language_code == "arabic" else 'Positive', 0)
+                        positive = sentiment_counts.get('إيجابي' if language == "arabic" else 'Positive', 0)
                         st.metric("Positive" if language == "English" else "إيجابي", 
                                  f"{positive} ({positive/len(results):.1%})")
                     
                     with col2:
-                        negative = sentiment_counts.get('سلبي' if language_code == "arabic" else 'Negative', 0)
+                        negative = sentiment_counts.get('سلبي' if language == "arabic" else 'Negative', 0)
                         st.metric("Negative" if language == "English" else "سلبي", 
                                  f"{negative} ({negative/len(results):.1%})")
                     
                     with col3:
-                        neutral = sentiment_counts.get('محايد' if language_code == "arabic" else 'Neutral', 0)
+                        neutral = sentiment_counts.get('محايد' if language == "arabic" else 'Neutral', 0)
                         st.metric("Neutral" if language == "English" else "محايد", 
                                  f"{neutral} ({neutral/len(results):.1%})")
                     
