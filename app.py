@@ -69,7 +69,8 @@ def load_model(language):
     lang_code = "ar" if language == "Arabic" else "en"
     model_path = f"models/{lang_code}"
     
-    download_model_files(language)
+    if not download_model_files(language):
+        st.write("not done")
     
     try:
         tokenizer = BertTokenizer.from_pretrained(model_path)
@@ -90,7 +91,7 @@ language = st.sidebar.radio(
 
 # تحميل النموذج المناسب
 language_code = "arabic" if language == "Arabic" else "english"
-model, tokenizer = load_model(language)
+model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
@@ -334,8 +335,8 @@ if analyze_button:
                 if not comments:
                     st.error("❌ No comments found or an error occurred")
                 else:
-                    results = analyze_comments(comments, language)
-                    fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language)
+                    results = analyze_comments(comments, language_code)
+                    fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language_code)
                     
                     st.success(f"✅ Successfully analyzed {len(results)} comments!")
                     
@@ -344,17 +345,17 @@ if analyze_button:
                     sentiment_counts = df['sentiment'].value_counts()
                     
                     with col1:
-                        positive = sentiment_counts.get('إيجابي' if language == "arabic" else 'Positive', 0)
+                        positive = sentiment_counts.get('إيجابي' if language_code == "arabic" else 'Positive', 0)
                         st.metric("Positive" if language == "English" else "إيجابي", 
                                  f"{positive} ({positive/len(results):.1%})")
                     
                     with col2:
-                        negative = sentiment_counts.get('سلبي' if language == "arabic" else 'Negative', 0)
+                        negative = sentiment_counts.get('سلبي' if language_code == "arabic" else 'Negative', 0)
                         st.metric("Negative" if language == "English" else "سلبي", 
                                  f"{negative} ({negative/len(results):.1%})")
                     
                     with col3:
-                        neutral = sentiment_counts.get('محايد' if language == "arabic" else 'Neutral', 0)
+                        neutral = sentiment_counts.get('محايد' if language_code == "arabic" else 'Neutral', 0)
                         st.metric("Neutral" if language == "English" else "محايد", 
                                  f"{neutral} ({neutral/len(results):.1%})")
                     
