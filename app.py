@@ -88,7 +88,7 @@ def load_model(language):
 
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
-language = st.selectbox("اختر اللغة:", ["English", "Arabic"])
+language = st.selectbox("اختر اللغة:", ["english", "arabic"])
 
 
 # تحميل النموذج المناسب
