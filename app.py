@@ -53,10 +53,11 @@ def download_model_files(language):
             except Exception as e:
                 st.error(f"Error copying {filename}: {str(e)}")
     drive_links = {
-        "ar": "https://drive.google.com/uc?id=1ElMOLoZRd7002NWfHEWbrHU7UpALral_",
+        "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
         "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
     }
-    
+    # https://drive.google.com/file/d/1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH/view?usp=sharing
+    #https://drive.google.com/file/d/1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-/view?usp=drive_link
     # https://drive.google.com/file/d/1ElMOLoZRd7002NWfHEWbrHU7UpALral_/view?usp=drive_link
     model_path = f"{model_dir}/model.safetensors"
     if not os.path.exists(model_path):
@@ -69,7 +70,7 @@ def download_model_files(language):
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
     lang_code = "ar" if language == "arabic" else "en"
-    model_path = f"{lang_code}"
+    model_path = f"models/{lang_code}"
     
     if not download_model_files(language):
         st.error(f"Failed to download model files:{language}")
