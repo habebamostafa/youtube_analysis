@@ -30,6 +30,11 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 #         model_url_ar = "https://drive.google.com/uc?id=1ig3la7xbgKI0Q9iz79b2_OD5cpf_Jx-X"
 
 #         gdown.download(model_url_en, "model.safetensors", quiet=False)
+LANG_CODES = {
+    "Arabic": ("ar", "arabic"),
+    "English": ("en", "english")
+}
+
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
@@ -66,10 +71,9 @@ def download_model_files(language):
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
-    lang_code = "ar" if language == "Arabic" else "en"
-    model_path = f"models/{lang_code}"
-    
-    download_model_files(language)
+    lang_short, lang_full = LANG_CODES[language]
+    model_path = f"models/{lang_short}"
+    download_model_files(language) 
     
     try:
         tokenizer = BertTokenizer.from_pretrained(model_path)
