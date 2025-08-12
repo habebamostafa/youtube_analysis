@@ -70,7 +70,7 @@ def load_model(language):
     model_path = f"models/{lang_code}"
     
     if not download_model_files(language):
-        st.write("not done")
+        st.error("not done")
     
     try:
         tokenizer = BertTokenizer.from_pretrained(model_path)
