@@ -33,6 +33,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
+@st.cache_resource
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
     lang_code = "ar" if language == "arabic" else "en"
