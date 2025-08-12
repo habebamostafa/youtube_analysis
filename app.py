@@ -64,7 +64,7 @@ def download_model_files(language):
             gdown.download(drive_links[lang_code], model_path, quiet=False)
         except Exception as e:
             st.error(f"Error downloading model.safetensors: {str(e)}")
-
+download_model_files("arabic")
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
@@ -74,6 +74,8 @@ def load_model(language):
         "arabic": "models/ar"
     }
     path = model_paths.get(language)
+    if not path:
+        raise ValueError(f"Model path for language '{language}' not found.")
     
     try:
         tokenizer = BertTokenizer.from_pretrained(path)
