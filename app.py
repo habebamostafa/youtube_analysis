@@ -86,22 +86,19 @@ def load_model(language):
 
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
-language = st.selectbox("اختر اللغة:", ["English", "Arabic"])
-
+language = st.sidebar.radio(
+    "Select Comment Language:",
+    ("Arabic", "English"),
+    index=0
+)
 
 # تحميل النموذج المناسب
-# language_code = "arabic" if language.lower() == "arabic" else "english"
+language = "arabic" if language.lower() == "arabic" else "english"
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
     model, tokenizer = load_model(language)
-    inputs = tokenizer(
-        text, 
-        return_tensors="pt", 
-        truncation=True, 
-        padding=True, 
-        max_length=512
-    )
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
     with torch.no_grad():
         outputs = model(**inputs)
         logits = outputs.logits
@@ -317,7 +314,7 @@ single_comment = st.sidebar.text_area("Enter a comment to analyze:")
 
 if st.sidebar.button("Analyze Comment"):
     if single_comment:
-        label, confidence, emoji = predict_sentiment(single_comment, language)
+        label, confidence, emoji = predict_sentiment(single_comment, language_code)
 
         label_map_ar = {0: "Negative", 1: "Positive", 2: "Neutral"}
         colors = {0: "🔴", 1: "🟢", 2: "🟡"}
