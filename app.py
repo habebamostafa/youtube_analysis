@@ -93,8 +93,8 @@ language = st.sidebar.radio(
 )
 
 # تحميل النموذج المناسب
-language_code = "arabic" if language == "Arabic" else "english"
-model, tokenizer = load_model(language_code)
+# language_code = "arabic" if language == "Arabic" else "english"
+model, tokenizer = load_model(language)
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
