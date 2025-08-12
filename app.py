@@ -88,7 +88,7 @@ def load_model(language):
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
     "Select Comment Language:",
-    ("Arabic", "English"),
+    ("arabic", "english"),
     index=0
 )
 
@@ -208,16 +208,16 @@ def get_youtube_comments(video_id, api_key=None, max_comments=100):
 
     # return comments
 
-def analyze_comments(comments, language_code="english"):
+def analyze_comments(comments, language="arabic"):
     """Analyze sentiment of comments with language support"""
-    if language_code == "arabic":
+    if language == "arabic":
         label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
     else:
         label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
 
     results = []
     for comment in comments:
-        sentiment, confidence, emoji = predict_sentiment(comment['text'], language_code)
+        sentiment, confidence, emoji = predict_sentiment(comment['text'], language)
         results.append({
             'comment': comment['text'][:100] + "..." if len(comment['text']) > 100 else comment['text'],
             'author': comment['author'],
@@ -314,7 +314,7 @@ single_comment = st.sidebar.text_area("Enter a comment to analyze:")
 
 if st.sidebar.button("Analyze Comment"):
     if single_comment:
-        label, confidence, emoji = predict_sentiment(single_comment, language_code)
+        label, confidence, emoji = predict_sentiment(single_comment, language)
 
         label_map_ar = {0: "Negative", 1: "Positive", 2: "Neutral"}
         colors = {0: "🔴", 1: "🟢", 2: "🟡"}
