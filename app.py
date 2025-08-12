@@ -110,14 +110,14 @@ def load_model(language):
     # 2. تحميل النموذج مع معالجة الأخطاء
     try:
         # تحميل tokenizer مع إعدادات خاصة للغة العربية
-        tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer = BertTokenizer.from_pretrained(
             model_dir,
             use_fast=True,
             do_lower_case=False if lang_code == "ar" else True
         )
         
         # تحميل النموذج مع التحقق من التوافق
-        model = AutoModelForSequenceClassification.from_pretrained(
+        model = BertForSequenceClassification.from_pretrained(
             model_dir,
             num_labels=3  # تأكيد أن النموذج متوقع لثلاث فئات
         )
