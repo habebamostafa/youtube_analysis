@@ -69,7 +69,7 @@ def copy_model_files(language):
 def download_model_weights(language):
     """تنزيل أوزان النموذج فقط"""
     lang_code = "ar" if language == "arabic" else "en"
-    model_path = f"{lang_code}/model.safetensors"
+    model_path = f"{lang_code}"
     
     if not os.path.exists(model_path):
         drive_links = {
