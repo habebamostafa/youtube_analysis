@@ -91,7 +91,7 @@ def download_model_weights(language):
 def load_model(language):
     """تحميل النموذج النهائي مع معالجة الأخطاء المحسنة"""
     lang_code = "ar" if language == "arabic" else "en"
-    model_dir = f"models/{lang_code}"
+    model_dir = f"{lang_code}"
     
     # 1. التحقق من وجود جميع الملفات المطلوبة
     if lang_code=="ar":
