@@ -35,9 +35,7 @@ st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 os.makedirs("models/ar", exist_ok=True)
 os.makedirs("models/en", exist_ok=True)
-import shutil
-shutil.rmtree("models/ar", ignore_errors=True)
-os.makedirs("models/ar", exist_ok=True)
+
 def copy_model_files(language):
     """نسخ ملفات النموذج من المجلدات المحلية إلى models/"""
     lang_code = "ar" if language == "arabic" else "en"
@@ -90,33 +88,41 @@ def download_model_weights(language):
 
 # Update the load_model function to include better error handling
 @st.cache_resource
+@st.cache_resource
 def load_model(language):
     lang_code = "ar" if language == "arabic" else "en"
     model_dir = f"models/{lang_code}"
     
     try:
-        # تحميل Tokenizer مع معالجة خاصة للعربية
+        # تحميل Tokenizer
         tokenizer = AutoTokenizer.from_pretrained(
             model_dir,
             use_fast=True,
-            do_lower_case=False
+            do_lower_case=False if lang_code == "ar" else True
         )
         
-        # تحميل النموذج مع التأكد من توافق المفردات
+        # تحميل النموذج
         model = AutoModelForSequenceClassification.from_pretrained(
             model_dir,
             num_labels=3
         )
+        model.eval()
         
-        # فحص التوافق الحرج
-        if tokenizer.vocab_size != model.config.vocab_size:
-            st.error(f"تعارض في المفردات: Tokenizer={tokenizer.vocab_size}, Model={model.config.vocab_size}")
+        # اختبار توافق Tokenizer والنموذج
+        if model.config.vocab_size != tokenizer.vocab_size:
+            st.error("تعارض في حجم المفردات بين النموذج و Tokenizer!")
             return None, None
+        
+        # اختبار تشغيل النموذج
+        test_text = "هذا اختبار" if lang_code == "ar" else "This is a test"
+        test_input = tokenizer(test_text, return_tensors="pt", truncation=True, padding=True)
+        with torch.no_grad():
+            model(**test_input)  # إذا لم يحدث خطأ، النموذج يعمل
             
         return model, tokenizer
         
     except Exception as e:
-        st.error(f"خطأ في التحميل: {str(e)}")
+        st.error(f"فشل تحميل النموذج: {str(e)}")
         return None, None
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
