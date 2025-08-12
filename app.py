@@ -52,10 +52,10 @@ def download_model_files(language):
             except Exception as e:
                 st.error(f"Error copying {filename}: {str(e)}")
     drive_links = {
-        "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
+        "ar": "https://drive.google.com/uc?id=1ElMOLoZRd7002NWfHEWbrHU7UpALral_",
         "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
     }
-    
+    # https://drive.google.com/file/d/1ElMOLoZRd7002NWfHEWbrHU7UpALral_/view?usp=drive_link
     model_path = f"{model_dir}/model.safetensors"
     if not os.path.exists(model_path):
         try:
