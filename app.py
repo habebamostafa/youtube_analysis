@@ -35,9 +35,9 @@ st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
-    lang_code = "ar" if language == "Arabic" else "en"
+    lang_code = "ar" if language == "arabic" else "en"
     model_dir = f"models/{lang_code}"
-    os.makedirs(model_dir, exist_ok=True)
+    # os.makedirs(model_dir, exist_ok=True)
     
     light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
