@@ -35,7 +35,7 @@ st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
-    lang_code = "ar" if language == "arabic" else "en"
+    lang_code = "ar" if language == "Arabic" else "en"
     model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
@@ -56,7 +56,7 @@ def download_model_files(language):
         "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
     }
     
-    model_path = f"{model_dir}"
+    model_path = f"{model_dir}/model.safetensors"
     if not os.path.exists(model_path):
         try:
             gdown.download(drive_links[lang_code], model_path, quiet=False)
@@ -66,11 +66,10 @@ def download_model_files(language):
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
-    lang_code = "ar" if language == "arabic" else "en"
+    lang_code = "ar" if language == "Arabic" else "en"
     model_path = f"models/{lang_code}"
     
-    if not download_model_files(language):
-        st.error("not done")
+    download_model_files(language)
     
     try:
         tokenizer = BertTokenizer.from_pretrained(model_path)
@@ -85,12 +84,12 @@ def load_model(language):
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
     "Select Comment Language:",
-    ("arabic", "english"),
+    ("Arabic", "English"),
     index=0
 )
 
 # تحميل النموذج المناسب
-language_code = "arabic" if language == "arabic" else "english"
+language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
