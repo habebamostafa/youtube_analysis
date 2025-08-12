@@ -41,7 +41,7 @@ drive_links = {
 @st.cache_resource
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
-    lang_code = "ar" if language == "Arabic" else "en"
+    lang_code = "ar" if language == "arabic" else "en"
     model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
