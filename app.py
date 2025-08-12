@@ -30,24 +30,19 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 #         model_url_ar = "https://drive.google.com/uc?id=1ig3la7xbgKI0Q9iz79b2_OD5cpf_Jx-X"
 
 #         gdown.download(model_url_en, "model.safetensors", quiet=False)
-LANG_CODES = {
-    "Arabic": ("ar", "arabic"),
-    "English": ("en", "english")
-}
-
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
-    lang_short, _ = LANG_CODES[language]
-    model_dir = f"models/{lang_short}"
+    lang_code = "ar" if language == "Arabic" else "en"
+    model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
     light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
     for filename in light_files:
-        src = f"{lang_short}/{filename}"
+        src = f"{lang_code}/{filename}"
         dst = f"{model_dir}/{filename}"
         
         if not os.path.exists(dst):
@@ -64,16 +59,17 @@ def download_model_files(language):
     model_path = f"{model_dir}/model.safetensors"
     if not os.path.exists(model_path):
         try:
-            gdown.download(drive_links[lang_short], model_path, quiet=False)
+            gdown.download(drive_links[lang_code], model_path, quiet=False)
         except Exception as e:
             st.error(f"Error downloading model.safetensors: {str(e)}")
 
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
-    lang_short, lang_full = LANG_CODES[language]
-    model_path = f"models/{lang_short}"
-    download_model_files(language) 
+    lang_code = "ar" if language.lower() == "arabic" else "en"  # تعديل هنا
+    model_path = f"models/{lang_code}"
+    
+    download_model_files(language)
     
     try:
         tokenizer = BertTokenizer.from_pretrained(model_path)
@@ -93,11 +89,9 @@ language = st.sidebar.radio(
 )
 
 # تحميل النموذج المناسب
-# language_code = "arabic" if language == "Arabic" else "english"
-lang_short, lang_full = LANG_CODES[language]
-language_code = lang_short
-model, tokenizer = load_model(language)
-
+# تحميل النموذج المناسب
+language_code = "arabic" if language == "Arabic" else "english"
+model, tokenizer = load_model(language)  # هنا يجب تمرير language وليس language_code
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
@@ -108,7 +102,7 @@ def predict_sentiment(text, language):
         probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
         confidence = probabilities[predicted_class].item()
         
-        if language == "arabic":
+        if language.lower() == "arabic":  # تعديل هنا
             label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
             colors = {0: "🔴", 1: "🟢", 2: "🟡"}
         else:
@@ -340,7 +334,7 @@ if analyze_button:
                 if not comments:
                     st.error("❌ No comments found or an error occurred")
                 else:
-                    results = analyze_comments(comments, language_code)
+                    results = analyze_comments(comments, language.lower())
                     fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language_code)
                     
                     st.success(f"✅ Successfully analyzed {len(results)} comments!")
