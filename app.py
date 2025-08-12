@@ -68,17 +68,16 @@ def download_model_files(language):
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
-    lang_code = "ar" if language == "arabic" else "en"
-    model_path = f"models/{lang_code}"
-    
-    with st.spinner("Downloading model files..."):
-        download_model_files(language)
-        st.success("Model loaded successfully!")
-
+    # lang_code = "ar" if language == "arabic" else "en"
+    model_paths = {
+        "english": "models/en",
+        "arabic": "models/ar"
+    }
+    path = model_paths.get(language)
     
     try:
-        tokenizer = BertTokenizer.from_pretrained(model_path)
-        model = BertForSequenceClassification.from_pretrained(model_path)
+        tokenizer = BertTokenizer.from_pretrained(path)
+        model = BertForSequenceClassification.from_pretrained(path)
         model.eval()
         return model, tokenizer
     except Exception as e:
@@ -87,19 +86,22 @@ def load_model(language):
 
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
-language = st.sidebar.radio(
-    "Select Comment Language:",
-    ("Arabic", "English"),
-    index=0
-)
+language = st.selectbox("اختر اللغة:", ["English", "Arabic"])
+
 
 # تحميل النموذج المناسب
-language_code = "arabic" if language.lower() == "arabic" else "english"
+# language_code = "arabic" if language.lower() == "arabic" else "english"
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
-    model, tokenizer = load_model(language_code)
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    model, tokenizer = load_model(language)
+    inputs = tokenizer(
+        text, 
+        return_tensors="pt", 
+        truncation=True, 
+        padding=True, 
+        max_length=512
+    )
     with torch.no_grad():
         outputs = model(**inputs)
         logits = outputs.logits
@@ -315,7 +317,7 @@ single_comment = st.sidebar.text_area("Enter a comment to analyze:")
 
 if st.sidebar.button("Analyze Comment"):
     if single_comment:
-        label, confidence, emoji = predict_sentiment(single_comment, language_code)
+        label, confidence, emoji = predict_sentiment(single_comment, language)
 
         label_map_ar = {0: "Negative", 1: "Positive", 2: "Neutral"}
         colors = {0: "🔴", 1: "🟢", 2: "🟡"}
@@ -342,8 +344,8 @@ if analyze_button:
                 if not comments:
                     st.error("❌ No comments found or an error occurred")
                 else:
-                    results = analyze_comments(comments, language_code)
-                    fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language_code)
+                    results = analyze_comments(comments, language)
+                    fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language)
                     
                     st.success(f"✅ Successfully analyzed {len(results)} comments!")
                     
@@ -352,17 +354,17 @@ if analyze_button:
                     sentiment_counts = df['sentiment'].value_counts()
                     
                     with col1:
-                        positive = sentiment_counts.get('إيجابي' if language_code == "arabic" else 'Positive', 0)
+                        positive = sentiment_counts.get('إيجابي' if language == "arabic" else 'Positive', 0)
                         st.metric("Positive" if language == "English" else "إيجابي", 
                                  f"{positive} ({positive/len(results):.1%})")
                     
                     with col2:
-                        negative = sentiment_counts.get('سلبي' if language_code == "arabic" else 'Negative', 0)
+                        negative = sentiment_counts.get('سلبي' if language == "arabic" else 'Negative', 0)
                         st.metric("Negative" if language == "English" else "سلبي", 
                                  f"{negative} ({negative/len(results):.1%})")
                     
                     with col3:
-                        neutral = sentiment_counts.get('محايد' if language_code == "arabic" else 'Neutral', 0)
+                        neutral = sentiment_counts.get('محايد' if language == "arabic" else 'Neutral', 0)
                         st.metric("Neutral" if language == "English" else "محايد", 
                                  f"{neutral} ({neutral/len(results):.1%})")
                     
