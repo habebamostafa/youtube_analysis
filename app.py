@@ -56,7 +56,7 @@ def download_model_files(language):
         "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
     }
     
-    model_path = f"{model_dir}/model.safetensors"
+    model_path = f"{model_dir}"
     if not os.path.exists(model_path):
         try:
             gdown.download(drive_links[lang_code], model_path, quiet=False)
