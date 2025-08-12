@@ -72,7 +72,9 @@ def load_model(language):
     model_path = f"models/{lang_code}"
     
     download_model_files(language)
-    
+    if not download_model_files(language):
+        st.error("Failed to download model files")
+        return None, None
     try:
         tokenizer = BertTokenizer.from_pretrained(model_path)
         model = BertForSequenceClassification.from_pretrained(model_path)
