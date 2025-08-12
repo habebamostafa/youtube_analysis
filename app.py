@@ -69,7 +69,8 @@ def load_model(language):
     lang_code = "ar" if language == "Arabic" else "en"
     model_path = f"models/{lang_code}"
     
-    download_model_files(language)
+    if not download_model_files(language):
+        st.error("Failed to download model files. Trying fallback...")
     
     try:
         tokenizer = BertTokenizer.from_pretrained(model_path)
