@@ -89,12 +89,12 @@ language = st.sidebar.radio(
 )
 
 # تحميل النموذج المناسب
-language_code = "arabic" if language == "Arabic" else "english"
-
+language_code = "arabic" if language.lower() == "arabic" else "english"
+model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
-    model, tokenizer = load_model(language_code)
+    
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
     with torch.no_grad():
         outputs = model(**inputs)
@@ -103,7 +103,7 @@ def predict_sentiment(text, language):
         probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
         confidence = probabilities[predicted_class].item()
         
-        if language == "arabic":
+        if language.lower() == "arabic":
             label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
             colors = {0: "🔴", 1: "🟢", 2: "🟡"}
         else:
@@ -311,12 +311,15 @@ single_comment = st.sidebar.text_area("Enter a comment to analyze:")
 
 if st.sidebar.button("Analyze Comment"):
     if single_comment:
-        sentiment_id, confidence = predict_sentiment(single_comment,language_code)
+        label, confidence, emoji = predict_sentiment(single_comment, language_code)
+
         label_map_ar = {0: "Negative", 1: "Positive", 2: "Neutral"}
         colors = {0: "🔴", 1: "🟢", 2: "🟡"}
 
-        st.sidebar.markdown(f"**Result:** {colors[sentiment_id]} {label_map_ar[sentiment_id]}")
+        st.sidebar.markdown(f"**Result:** {colors[label]} {label_map_ar[label]}")
         st.sidebar.markdown(f"**Confidence Level:** {confidence:.2%}")
+        st.sidebar.markdown(f"**Result:** {emoji} {label}")
+
     else:
         st.sidebar.warning("Please enter a comment to analyze")
 
