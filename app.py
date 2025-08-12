@@ -79,7 +79,6 @@ def load_model(language):
     # التأكد من وجود جميع الملفات المطلوبة
     required_files = [
         "config.json",
-        "pytorch_model.bin",
         "vocab.txt",
         "special_tokens_map.json",
         "tokenizer_config.json"
