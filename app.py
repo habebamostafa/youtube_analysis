@@ -33,21 +33,50 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
-@st.cache_resource
-def download_model_weights(language):
-    """تنزيل أوزان النموذج فقط من جوجل درايف"""
+os.makedirs("models/ar", exist_ok=True)
+os.makedirs("models/en", exist_ok=True)
+
+def copy_model_files(language):
+    """نسخ ملفات النموذج من المجلدات المحلية إلى models/"""
     lang_code = "ar" if language == "arabic" else "en"
-    model_dir = f"models/{lang_code}"
+    src_dir = lang_code  # المجلد المصدر (ar أو en)
+    dst_dir = f"models/{lang_code}"  # المجلد الهدف
     
-    # روابط جوجل درايف لملفات الأوزان فقط
-    drive_links = {
-        "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
-        "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
-    }
+    required_files = [
+        "config.json",
+        "special_tokens_map.json",
+        "tokenizer_config.json",
+        "vocab.txt"
+    ]
     
-    model_path = f"{model_dir}/model.safetensors"
+    for filename in required_files:
+        src_path = os.path.join(src_dir, filename)
+        dst_path = os.path.join(dst_dir, filename)
+        
+        if not os.path.exists(src_path):
+            st.error(f"الملف {src_path} غير موجود!")
+            return False
+            
+        if not os.path.exists(dst_path):
+            try:
+                with open(src_path, 'rb') as f_src, open(dst_path, 'wb') as f_dst:
+                    f_dst.write(f_src.read())
+            except Exception as e:
+                st.error(f"خطأ في نسخ {filename}: {str(e)}")
+                return False
+    return True
+
+def download_model_weights(language):
+    """تنزيل أوزان النموذج فقط"""
+    lang_code = "ar" if language == "arabic" else "en"
+    model_path = f"models/{lang_code}/model.safetensors"
     
     if not os.path.exists(model_path):
+        drive_links = {
+            "ar": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
+            "en": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
+        }
+        
         try:
             with st.spinner(f"جاري تنزيل أوزان النموذج للغة {language}..."):
                 gdown.download(drive_links[lang_code], model_path, quiet=False)
@@ -59,32 +88,22 @@ def download_model_weights(language):
 
 @st.cache_resource
 def load_model(language):
-    """تحميل النموذج باستخدام الملفات المحلية"""
+    """تحميل النموذج النهائي"""
     lang_code = "ar" if language == "arabic" else "en"
     model_dir = f"models/{lang_code}"
     
-    # التأكد من وجود جميع الملفات المطلوبة
-    required_files = [
-        "config.json",
-        "special_tokens_map.json",
-        "tokenizer_config.json",
-        "vocab.txt",
-        "model.safetensors"
-    ]
+    # 1. نسخ الملفات الأساسية
+    if not copy_model_files(language):
+        st.error("فشل في تحضير ملفات النموذج")
+        return None, None
     
-    # التحقق من وجود الملفات الأساسية
-    for file in required_files[:-1]:  # كل الملفات عدا model.safetensors
-        if not os.path.exists(f"{model_dir}/{file}"):
-            st.error(f"الملف {file} غير موجود في مجلد {model_dir}")
-            return None, None
-    
-    # تنزيل أوزان النموذج إذا لم تكن موجودة
+    # 2. تنزيل الأوزان
     if not download_model_weights(language):
         st.error("فشل في تحميل أوزان النموذج")
         return None, None
     
+    # 3. تحميل النموذج
     try:
-        # تحميل النموذج من الملفات المحلية
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
         model = AutoModelForSequenceClassification.from_pretrained(model_dir)
         model.eval()
@@ -92,6 +111,7 @@ def load_model(language):
     except Exception as e:
         st.error(f"خطأ في تحميل النموذج: {str(e)}")
         return None, None
+
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
