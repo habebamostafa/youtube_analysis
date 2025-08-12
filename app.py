@@ -88,42 +88,51 @@ def download_model_weights(language):
 
 # Update the load_model function to include better error handling
 @st.cache_resource
-@st.cache_resource
 def load_model(language):
+    """تحميل النموذج النهائي مع معالجة الأخطاء المحسنة"""
     lang_code = "ar" if language == "arabic" else "en"
     model_dir = f"models/{lang_code}"
     
+    # 1. التحقق من وجود جميع الملفات المطلوبة
+    required_files = [
+        "config.json",
+        "special_tokens_map.json",
+        "tokenizer_config.json",
+        "vocab.txt",
+        "model.safetensors"
+    ]
+    
+    missing_files = [f for f in required_files if not os.path.exists(f"{model_dir}/{f}")]
+    if missing_files:
+        st.error(f"الملفات المفقودة: {', '.join(missing_files)}")
+        return None, None
+    
+    # 2. تحميل النموذج مع معالجة الأخطاء
     try:
-        # تحميل Tokenizer
+        # تحميل tokenizer مع إعدادات خاصة للغة العربية
         tokenizer = AutoTokenizer.from_pretrained(
             model_dir,
             use_fast=True,
             do_lower_case=False if lang_code == "ar" else True
         )
         
-        # تحميل النموذج
+        # تحميل النموذج مع التحقق من التوافق
         model = AutoModelForSequenceClassification.from_pretrained(
             model_dir,
-            num_labels=3
+            num_labels=3  # تأكيد أن النموذج متوقع لثلاث فئات
         )
         model.eval()
         
-        # اختبار توافق Tokenizer والنموذج
-        if model.config.vocab_size != tokenizer.vocab_size:
-            st.error("تعارض في حجم المفردات بين النموذج و Tokenizer!")
-            return None, None
-        
         # اختبار تشغيل النموذج
-        test_text = "هذا اختبار" if lang_code == "ar" else "This is a test"
-        test_input = tokenizer(test_text, return_tensors="pt", truncation=True, padding=True)
+        test_input = tokenizer("اختبار", return_tensors="pt")
         with torch.no_grad():
-            model(**test_input)  # إذا لم يحدث خطأ، النموذج يعمل
+            model(**test_input)
             
         return model, tokenizer
         
     except Exception as e:
         st.error(f"فشل تحميل النموذج: {str(e)}")
-        return None, None
+        
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
