@@ -40,14 +40,14 @@ st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
-    lang_code = "ar" if language == "Arabic" else "en"
-    model_dir = f"models/{lang_code}"
+    lang_short, _ = LANG_CODES[language]
+    model_dir = f"models/{lang_short}"
     os.makedirs(model_dir, exist_ok=True)
     
     light_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
     for filename in light_files:
-        src = f"{lang_code}/{filename}"
+        src = f"{lang_short}/{filename}"
         dst = f"{model_dir}/{filename}"
         
         if not os.path.exists(dst):
@@ -64,7 +64,7 @@ def download_model_files(language):
     model_path = f"{model_dir}/model.safetensors"
     if not os.path.exists(model_path):
         try:
-            gdown.download(drive_links[lang_code], model_path, quiet=False)
+            gdown.download(drive_links[lang_short], model_path, quiet=False)
         except Exception as e:
             st.error(f"Error downloading model.safetensors: {str(e)}")
 
