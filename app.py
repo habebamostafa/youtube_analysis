@@ -66,14 +66,26 @@ def download_model_files(language):
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
-    lang_code = "ar" if language.lower() == "arabic" else "en"  # تعديل هنا
+    lang_code = "ar" if language.lower() == "arabic" else "en"
     model_path = f"models/{lang_code}"
+    
+    # Ensure the model directory exists
+    if not os.path.exists(model_path):
+        st.error(f"Model directory not found: {model_path}")
+        return None, None
     
     download_model_files(language)
     
     try:
+        # Load tokenizer and model
         tokenizer = BertTokenizer.from_pretrained(model_path)
         model = BertForSequenceClassification.from_pretrained(model_path)
+        
+        # Verify the model has the expected number of classes
+        if model.config.num_labels not in [2, 3]:
+            st.error(f"Unexpected number of classes in model: {model.config.num_labels}")
+            return None, None
+            
         model.eval()
         return model, tokenizer
     except Exception as e:
@@ -94,22 +106,36 @@ language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language)  # هنا يجب تمرير language وليس language_code
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits
-        predicted_class = torch.argmax(logits, dim=1).item()
-        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-        confidence = probabilities[predicted_class].item()
-        
-        if language.lower() == "arabic":  # تعديل هنا
-            label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
-        else:
-            label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+    try:
+        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            predicted_class = torch.argmax(logits, dim=1).item()
             
-        return label_map[predicted_class], confidence, colors[predicted_class]
+            # Ensure the predicted class is within valid range
+            num_classes = logits.shape[1]
+            if predicted_class >= num_classes:
+                predicted_class = num_classes - 1  # Fall back to last class
+                
+            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+            confidence = probabilities[predicted_class].item()
+            
+            if language.lower() == "arabic":
+                label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
+                colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+            else:
+                label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
+                colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+                
+            # Ensure the predicted class exists in label_map
+            if predicted_class not in label_map:
+                predicted_class = 2  # Default to neutral if class is unknown
+                
+            return label_map[predicted_class], confidence, colors[predicted_class]
+    except Exception as e:
+        st.error(f"Error predicting sentiment: {str(e)}")
+        return "Error", 0.0, "⚪"
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
