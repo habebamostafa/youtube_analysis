@@ -35,7 +35,9 @@ st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 os.makedirs("models/ar", exist_ok=True)
 os.makedirs("models/en", exist_ok=True)
-
+import shutil
+shutil.rmtree("models/ar", ignore_errors=True)
+os.makedirs("models/ar", exist_ok=True)
 def copy_model_files(language):
     """نسخ ملفات النموذج من المجلدات المحلية إلى models/"""
     lang_code = "ar" if language == "arabic" else "en"
