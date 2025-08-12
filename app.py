@@ -95,11 +95,10 @@ language = st.sidebar.radio(
 
 # تحميل النموذج المناسب
 language_code = "arabic" if language.lower() == "arabic" else "english"
-model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
-    
+    model, tokenizer = load_model(language_code)
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
     with torch.no_grad():
         outputs = model(**inputs)
