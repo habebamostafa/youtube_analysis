@@ -101,10 +101,10 @@ def load_model(language):
             "tokenizer_config.json",
             "tokenizer.json",            
             "vocab.txt",
-            # "model.safetensors"
+            "model.safetensors"
         ]
     else:
-            required_files = [
+        required_files = [
             "config.json",
             "special_tokens_map.json",
             "tokenizer_config.json",
