@@ -94,20 +94,7 @@ def load_model(language):
     model_dir = f"models/{lang_code}"
     
     # 1. التحقق من وجود جميع الملفات المطلوبة
-    required_files = [
-        "config.json",
-        "special_tokens_map.json",
-        "tokenizer_config.json",
-        "vocab.txt",
-        "model.safetensors"
-    ]
     
-    missing_files = [f for f in required_files if not os.path.exists(f"{model_dir}/{f}")]
-    if missing_files:
-        st.error(f"الملفات المفقودة: {', '.join(missing_files)}")
-        return None, None
-    
-    # 2. تحميل النموذج مع معالجة الأخطاء
     try:
         # تحميل tokenizer مع إعدادات خاصة للغة العربية
         tokenizer = AutoTokenizer.from_pretrained(
