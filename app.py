@@ -85,12 +85,12 @@ def load_model(language):
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
     "Select Comment Language:",
-    ("Arabic", "English"),
+    ("arabic", "english"),
     index=0
 )
 
 # تحميل النموذج المناسب
-language_code = "arabic" if language == "Arabic" else "english"
+language_code = "arabic" if language == "arabic" else "english"
 model, tokenizer = load_model(language_code)
 
 def predict_sentiment(text, language):
