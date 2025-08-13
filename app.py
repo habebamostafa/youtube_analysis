@@ -11,7 +11,10 @@ import gdown
 import os
 import shutil
 import nltk
+nltk_data_dir = os.path.expanduser('~/nltk_data')
 
+if os.path.exists(nltk_data_dir):
+    shutil.rmtree(nltk_data_dir)
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 nltk.download('stopwords')
