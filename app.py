@@ -10,6 +10,83 @@ from youtube_comment_downloader import YoutubeCommentDownloader
 import gdown
 import os
 import shutil
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
+# قائمة ستوب وورد من NLTK
+ARABIC_STOPWORDS = set(stopwords.words("arabic"))
+import emoji
+
+def convert_emojis(text):
+    text = emoji.demojize(text, language='en')
+    emoji_translations = {
+        "face_with_tears_of_joy": "ضحك",
+        "red_heart": "حب",
+        "angry_face": "غضب",
+        "crying_face": "حزن",
+        "smiling_face_with_smiling_eyes": "سعادة",
+        "thumbs_up": "اعجاب",
+        "clapping_hands": "تصفيق",
+        "fire": "رائع",
+        "😂": "ضحك", "❤": "حب", "😍": "حب",
+        "😊": "سعادة", "👍": "موافقة", "😢": "حزن",
+        "👏": "تصفيق", "🔥": "رائع", "😠": "غضب"
+    }
+
+    for emoji_code, arabic_word in emoji_translations.items():
+        text = text.replace(f":{emoji_code}:", arabic_word)
+
+    return text
+
+def has_emoji(text):
+    """تحقق إذا كان النص يحتوي على إيموجي"""
+    emoji_pattern = re.compile("["
+        u"\U0001F600-\U0001F64F"  # Emoticons
+        u"\U0001F300-\U0001F5FF"  # Symbols & Pictographs
+        u"\U0001F680-\U0001F6FF"  # Transport & Map
+        u"\U0001F1E0-\U0001F1FF"  # Flags (iOS)
+        u"\U00002500-\U00002BEF"  # Chinese/Japanese/Korean
+        u"\U00002702-\U000027B0"
+        u"\U00002702-\U000027B0"
+        u"\U000024C2-\U0001F251"
+        u"\U0001f926-\U0001f937"
+        u"\U00010000-\U0010ffff"
+        "]+", flags=re.UNICODE)
+    return bool(emoji_pattern.search(text))
+arabic_stopwords = set(stopwords.words("arabic"))
+
+keep_words = {'لا', 'لم', 'لن', 'ما', 'مش', 'ليس', 'بدون', 'غير', 'إن', 'إذ', 'إذا'}
+custom_stopwords = arabic_stopwords - keep_words
+
+def remove_custom_stopwords(tokens):
+    """إزالة الكلمات التوقفية المخصصة"""
+    return [word for word in tokens if word not in custom_stopwords]
+def normalize_arabic(text):
+    if has_emoji(text):
+        text = convert_emojis(text)
+    text = re.sub(r'[^\u0600-\u06FF\s]', '', text)  # Remove non-Arabic
+    text = re.sub(r'[إأآا]', 'ا', text)
+    text = re.sub(r'ى', 'ي', text)
+    text = re.sub(r'ؤ', 'ء', text)
+    text = re.sub(r'ئ', 'ء', text)
+    text = re.sub(r'ة', 'ه', text)
+    text = re.sub(r'\bمش\b', 'ليس', text)
+    text = re.sub(r'\bمو\b', 'ليس', text)
+    text = re.sub(r'\bما (\w+)', r'ليس \1', text)
+    text = re.sub(r'\b(\w+)ش\b', r'\1', text)  # مثل: "فهمت" بدل "فهمتش"
+    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+    text = re.sub(r'\d+', '', text)      # Remove digits
+    text = re.sub(r'[a-zA-Z]', '', text) # Remove English
+    text = re.sub(r'[^\u0621-\u064A]', ' ', text) # Keep Arabic only
+    text = re.sub(r'[\u061F\u060C\u061B]', '', text)
+
+    tokens = word_tokenize(text)
+
+    # إزالة ستوب وورد NLTK و الستوب وورد المخصصة مع بعض
+    tokens = [word for word in tokens if word not in ARABIC_STOPWORDS]
+    tokens = remove_custom_stopwords(tokens)
+
+    return ' '.join(tokens)
 
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
