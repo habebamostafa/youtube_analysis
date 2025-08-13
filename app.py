@@ -74,7 +74,7 @@ def download_model_files(language):
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
     lang_code = "ar" if language == "Arabic" else "en"
-    model_path = f"{lang_code}"
+    model_path = f"models/{lang_code}"
     
     # التأكد من وجود جميع الملفات المطلوبة
     required_files = [
@@ -85,15 +85,22 @@ def load_model(language):
         "model.safetensors"
     ]
     
-    missing_files = [f for f in required_files if not os.path.exists(f"{model_path}/{f}")]
-    
+    # تحميل الملفات الناقصة
+    missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
     if missing_files:
-        st.error(f"الملفات الناقصة للنموذج: {', '.join(missing_files)}")
+        st.warning(f"جاري تحميل الملفات الناقصة: {', '.join(missing_files)}")
         download_model_files(language)
     
+    # التحقق مرة أخرى بعد التحميل
+    missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
+    if missing_files:
+        st.error(f"لا تزال الملفات الناقصة: {', '.join(missing_files)}")
+        return None, None
+    
     try:
-        tokenizer = BertTokenizer.from_pretrained(model_path)
-        model = BertForSequenceClassification.from_pretrained(model_path)
+        # استخدم AutoModel بدلاً من BertModel المحدد
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = AutoModelForSequenceClassification.from_pretrained(model_path)
         
         # التحقق من عدد الفئات
         if model.config.num_labels != 3:
@@ -105,7 +112,6 @@ def load_model(language):
     except Exception as e:
         st.error(f"خطأ في تحميل النموذج: {str(e)}")
         return None, None
-
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
