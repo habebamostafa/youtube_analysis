@@ -134,26 +134,39 @@ def predict_sentiment(text, language):
         with torch.no_grad():
             outputs = model(**inputs)
             logits = outputs.logits
-            predicted_class = torch.argmax(logits, dim=1).item()
             
-            # التأكد من أن الفئة ضمن النطاق الصحيح
-            if predicted_class >= model.config.num_labels:
-                predicted_class = model.config.num_labels - 1
-                
+            # Get probabilities using softmax
             probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+            
+            # Get the predicted class with highest probability
+            predicted_class = torch.argmax(probabilities).item()
+            
+            # Verify the predicted class is within valid range
+            num_labels = model.config.num_labels
+            if predicted_class >= num_labels:
+                st.error(f"Invalid class index {predicted_class} for model with {num_labels} labels")
+                predicted_class = num_labels - 1  # Fallback to last class
+            
             confidence = probabilities[predicted_class].item()
             
+            # Define labels and colors based on language
             if language == "arabic":
-                labels = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
-                colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+                labels = ["سلبي", "إيجابي", "محايد"]
+                colors = ["🔴", "🟢", "🟡"]
             else:
-                labels = {0: "Negative", 1: "Positive", 2: "Neutral"}
-                colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+                labels = ["Negative", "Positive", "Neutral"]
+                colors = ["🔴", "🟢", "🟡"]
+            
+            # Ensure we have enough labels
+            if predicted_class >= len(labels):
+                return "غير محدد", 0.0, "⚪"
                 
-            return labels.get(predicted_class, "محايد"), confidence, colors.get(predicted_class, "🟡")
+            return labels[predicted_class], confidence, colors[predicted_class]
+            
     except Exception as e:
         st.error(f"خطأ في تحليل المشاعر: {str(e)}")
         return "خطأ", 0.0, "⚪"
+    
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
