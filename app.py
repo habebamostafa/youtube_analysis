@@ -124,6 +124,9 @@ language = st.sidebar.radio(
 # تحميل النموذج المناسب
 language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language)  # هنا يجب تمرير language وليس language_code
+if model is None or tokenizer is None:
+    st.error("Failed to load model - please check the error messages above")
+    st.stop()
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
     if not text.strip():
