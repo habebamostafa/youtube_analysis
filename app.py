@@ -226,7 +226,8 @@ tokenizer_vocab_size = tokenizer.vocab_size if hasattr(tokenizer, 'vocab_size') 
 def predict_sentiment(text, language):
     if not text.strip():
         return " not defined" if language == "arabic" else "Unknown", 0.0, "⚪"
-    
+    if language.lower() == "arabic":
+        text = normalize_arabic(text)
     try:
         # Clean and preprocess text
         text = text.strip()
