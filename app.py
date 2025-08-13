@@ -11,32 +11,9 @@ import gdown
 import os
 import shutil
 import nltk
-
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-
 import emoji
-
-def convert_emojis(text):
-    text = emoji.demojize(text, language='en')
-    emoji_translations = {
-        "face_with_tears_of_joy": "ضحك",
-        "red_heart": "حب",
-        "angry_face": "غضب",
-        "crying_face": "حزن",
-        "smiling_face_with_smiling_eyes": "سعادة",
-        "thumbs_up": "اعجاب",
-        "clapping_hands": "تصفيق",
-        "fire": "رائع",
-        "😂": "ضحك", "❤": "حب", "😍": "حب",
-        "😊": "سعادة", "👍": "موافقة", "😢": "حزن",
-        "👏": "تصفيق", "🔥": "رائع", "😠": "غضب"
-    }
-
-    for emoji_code, arabic_word in emoji_translations.items():
-        text = text.replace(f":{emoji_code}:", arabic_word)
-
-    return text
 
 def has_emoji(text):
     """تحقق إذا كان النص يحتوي على إيموجي"""
@@ -54,295 +31,258 @@ def has_emoji(text):
         "]+", flags=re.UNICODE)
     return bool(emoji_pattern.search(text))
 
-def normalize_arabic(text):
+def improved_convert_emojis(text):
+    """تحسين معالجة الإيموجي مع إعطاء أوزان أكبر للمشاعر"""
+    # تحويل الإيموجي إلى نص
+    text = emoji.demojize(text, language='en')
+    
+    # قاموس محسن للإيموجي العربية
+    emoji_translations = {
+        # إيجابي قوي
+        "face_with_tears_of_joy": "ضحك سعادة فرح جميل",
+        "red_heart": "حب عشق محبة رائع",
+        "smiling_face_with_smiling_eyes": "سعادة فرح بهجة جميل",
+        "thumbs_up": "إعجاب موافقة رائع ممتاز",
+        "clapping_hands": "تصفيق إعجاب برافو رائع",
+        "fire": "رائع ممتاز جميل يجنن",
+        "party_popper": "احتفال فرح سعادة رائع",
+        "grinning_face": "ضحك سعادة فرح جميل",
+        "heart_eyes": "حب إعجاب جميل رائع ممتاز",
+        "rolling_on_the_floor_laughing": "ضحك سعادة فرح قوي جميل",
+        "face_blowing_a_kiss": "حب قبلة سعادة جميل",
+        "smiling_face_with_heart-eyes": "حب سعادة جميل رائع",
+        
+        # سلبي
+        "crying_face": "حزن بكاء أسف سيء",
+        "angry_face": "غضب زعل سيء",
+        "broken_heart": "حزن ألم فراق سيء",
+        "disappointed_face": "خيبة أمل حزن سيء",
+        "face_with_steam_from_nose": "غضب زعل سيء",
+        
+        # رموز مباشرة
+        "😂": "ضحك سعادة فرح جميل", "❤": "حب محبة رائع", "😍": "حب إعجاب جميل رائع",
+        "😊": "سعادة فرح جميل", "👍": "إعجاب موافقة رائع", "😢": "حزن بكاء سيء",
+        "👏": "تصفيق إعجاب رائع", "🔥": "رائع ممتاز جميل يجنن", "😠": "غضب زعل سيء",
+        "🎉": "فرح احتفال سعادة رائع", "🥰": "حب سعادة جميل", "😘": "حب قبلة جميل",
+        "🤣": "ضحك سعادة فرح قوي جميل", "💔": "حزن ألم فراق سيء", "😞": "حزن خيبة أمل سيء",
+        "✨": "جميل رائع ممتاز", "💕": "حب محبة جميل", "🌟": "رائع ممتاز جميل",
+        "😃": "سعادة فرح جميل", "😄": "سعادة فرح جميل", "😆": "ضحك سعادة جميل"
+    }
+
+    for emoji_code, arabic_words in emoji_translations.items():
+        text = text.replace(f":{emoji_code}:", arabic_words)
+    
+    return text
+
+def enhanced_normalize_arabic(text):
+    """تطبيع محسن للنص العربي مع الحفاظ على الكلمات المهمة"""
+    original_text = text
+    
+    # تحويل الإيموجي أولاً
     if has_emoji(text):
-        text = convert_emojis(text)
-    text = re.sub(r'[^\u0600-\u06FF\s]', '', text)  # Remove non-Arabic
-    text = re.sub(r'[إأآا]', 'ا', text)
-    text = re.sub(r'ى', 'ي', text)
-    text = re.sub(r'ؤ', 'ء', text)
-    text = re.sub(r'ئ', 'ء', text)
-    text = re.sub(r'ة', 'ه', text)
+        text = improved_convert_emojis(text)
+    
+    # كلمات إيجابية مهمة يجب الحفاظ عليها
+    positive_indicators = [
+        'رائع', 'جميل', 'ممتاز', 'حلو', 'جامد', 'يجنن', 'عظيم', 'مذهل', 'تحفة',
+        'أحب', 'بحب', 'حب', 'محبة', 'اعجاب', 'موافقة', 'برافو', 'تصفيق',
+        'سعادة', 'فرح', 'بهجة', 'ضحك', 'مبسوط', 'منبسط', 'حبيب', 'حبيبتي',
+        'يحبيبتي', 'روعة', 'بديع', 'لذيذ', 'استمري', 'شكرا', 'مشكور', 'الف شكر',
+        'احسنت', 'مبروك', 'موفق', 'ناجح', 'جيد', 'حسن', 'منيح', 'كويس'
+    ]
+    
+    # كلمات سلبية مهمة
+    negative_indicators = [
+        'سيء', 'وحش', 'مش حلو', 'مخرب', 'فظيع', 'قبيح', 'غبي', 'سخيف',
+        'أكره', 'كرهت', 'زهقت', 'ملل', 'حزن', 'زعل', 'غضب', 'خيبة',
+        'تعبان', 'مملل', 'بطال', 'زفت', 'محبط', 'مستاء', 'متضايق'
+    ]
+    
+    # إضافة مؤشرات المشاعر
+    sentiment_boost = ""
+    for word in positive_indicators:
+        if word in text.lower():
+            sentiment_boost += " إيجابي_قوي "
+    
+    for word in negative_indicators:
+        if word in text.lower():
+            sentiment_boost += " سلبي_قوي "
+    
+    # تطبيع النص الأساسي
+    text = re.sub(r'[^\u0600-\u06FF\s]', '', text)  # الاحتفاظ بالعربي فقط
+    text = re.sub(r'[إأآا]', 'ا', text)  # توحيد الألف
+    text = re.sub(r'ى', 'ي', text)  # توحيد الياء
+    text = re.sub(r'ؤ', 'ء', text)  # توحيد الهمزة
+    text = re.sub(r'ئ', 'ء', text)  # توحيد الهمزة
+    text = re.sub(r'ة', 'ه', text)  # توحيد التاء المربوطة
+    
+    # معالجة النفي العامي
     text = re.sub(r'\bمش\b', 'ليس', text)
     text = re.sub(r'\bمو\b', 'ليس', text)
-    text = re.sub(r'\bما (\w+)', r'ليس \1', text)
-    text = re.sub(r'\b(\w+)ش\b', r'\1', text)  # مثل: "فهمت" بدل "فهمتش"
-    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
-    text = re.sub(r'\d+', '', text)      # Remove digits
-    text = re.sub(r'[a-zA-Z]', '', text) # Remove English
-    text = re.sub(r'[^\u0621-\u064A]', ' ', text) # Keep Arabic only
-    text = re.sub(r'[\u061F\u060C\u061B]', '', text)
-    return ' '.join(text)
-
-st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
-st.title("🎥 YouTube Comments Sentiment Analysis")
-st.markdown("---")
-
-def download_model_files(language):
-    lang_code = "ar" if language == "Arabic" else "en"
-    model_dir = f"models/{lang_code}"
-    os.makedirs(model_dir, exist_ok=True)
+    text = re.sub(r'\bما\s+(\w+)', r'ليس \1', text)
+    text = re.sub(r'\b(\w+)ش\b', r'\1', text)  # إزالة "ش" النفي
     
-    config_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
+    # إزالة الأرقام والإنجليزي
+    text = re.sub(r'\d+', '', text)
+    text = re.sub(r'[a-zA-Z]', '', text)
+    text = re.sub(r'[^\u0621-\u064A\s]', ' ', text)  # العربي فقط
     
-    for filename in config_files:
-        src_path = f"{lang_code}/{filename}"
-        dst_path = f"{model_dir}/{filename}"
-        
-        if not os.path.exists(dst_path):
-            try:
-                shutil.copyfile(src_path, dst_path)
-            except Exception as e:
-                st.error(f"  error {filename}: {str(e)}")
-
-    model_files = {
-        "ar": {
-            "url": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
-            "dest": f"{model_dir}/model.safetensors"
-        },
-        "en": {
-            "url": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-",
-            "dest": f"{model_dir}/model.safetensors"
-        }
-    }
+    # دمج النص المعالج مع مؤشرات المشاعر
+    final_text = (text + " " + sentiment_boost).strip()
     
-    if not os.path.exists(model_files[lang_code]["dest"]):
-        try:
-            gdown.download(model_files[lang_code]["url"], model_files[lang_code]["dest"], quiet=False)
-        except Exception as e:
-            st.error(f"error: {str(e)}")
+    return ' '.join(final_text.split())
 
-@st.cache_resource
-def load_model(language):
-    lang_code = "ar" if language == "Arabic" else "en"
-    model_path = f"models/{lang_code}"
+def post_process_sentiment(text, sentiment, confidence):
+    """معالجة لاحقة لتحسين دقة التصنيف"""
+    original_text = text.lower()
     
-    try:
-        # Load tokenizer and model with error handling
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
-        model = AutoModelForSequenceClassification.from_pretrained(model_path)
-        
-        # Validate tokenizer and model compatibility
-        # if hasattr(tokenizer, 'vocab_size'):
-        #     tokenizer_vocab_size = tokenizer.vocab_size
-        # else:
-        #     tokenizer_vocab_size = len(tokenizer.get_vocab()) if hasattr(tokenizer, 'get_vocab') else 30000
-        
-        # model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
-        
-        # Debug output
-        # st.write("✅ Model loaded successfully")
-        # st.write(f"Model architecture: {model.__class__.__name__}")
-        # st.write(f"Number of classes: {model.config.num_labels}")
-        # st.write(f"Tokenizer vocab size: {tokenizer_vocab_size}")
-        # st.write(f"Model vocab size: {model_vocab_size}")
-        model.resize_token_embeddings(len(tokenizer))
-
-        # Check vocab size compatibility
-        # if tokenizer_vocab_size != model_vocab_size:
-        #     st.warning(f"⚠️ Vocab size mismatch! Tokenizer: {tokenizer_vocab_size}, Model: {model_vocab_size}")
-        #     st.info("This may cause 'index out of range' errors. Using fallback method for problematic tokens.")
-        
-        # if hasattr(model.config, 'id2label'):
-        #     st.write("Class labels:", model.config.id2label)
-        # else:
-        #     st.warning("No class label mapping found in model config")
-        
-        model.eval()
-        return model, tokenizer
-    except Exception as e:
-        st.error(f"❌ Model loading failed: {str(e)}")
-        import traceback
-        st.error(f"Traceback: {traceback.format_exc()}")
-        return None, None
-download_model_files("English")
-download_model_files("Arabic")
-
-st.sidebar.header("🌍 Language Settings")
-language = st.sidebar.radio(
-    "Select Comment Language:",
-    ("Arabic", "English"),
-    index=0
-)
-
-# Add vocab mismatch warning and solution
-st.sidebar.markdown("---")
-# st.sidebar.header("⚙️ Model Status")
-
-language_code = "arabic" if language == "Arabic" else "english"
-model, tokenizer = load_model(language) 
-
-if model is None or tokenizer is None:
-    st.error("Failed to load model - please check the error messages above")
-    st.stop()
-
-# Check vocab compatibility
-model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
-tokenizer_vocab_size = tokenizer.vocab_size if hasattr(tokenizer, 'vocab_size') else len(tokenizer.get_vocab()) if hasattr(tokenizer, 'get_vocab') else 64000
-
-# if tokenizer_vocab_size != model_vocab_size:
-#     st.sidebar.warning(f"Vocab Mismatch Detected!")
-#     st.sidebar.info(f"Tokenizer: {tokenizer_vocab_size:,} tokens")
-#     st.sidebar.info(f"Model: {model_vocab_size:,} tokens")
-#     st.sidebar.markdown("**Status:** Using token filtering + fallback")
+    # قواعد خاصة للنصوص الدينية
+    religious_keywords = ['الله', 'النبي', 'صلى', 'استغفر', 'دعاء', 'رب', 'يارب', 'اللهم', 'سبحان', 'الحمد']
+    if any(word in original_text for word in religious_keywords):
+        if sentiment == "سلبي":
+            return "إيجابي", max(confidence, 0.80)
+        elif sentiment == "محايد":
+            return "إيجابي", max(confidence, 0.75)
     
-#     with st.sidebar.expander("🔧 How to Fix This"):
-#         st.markdown("""
-#         **Option 1: Use a compatible tokenizer**
-#         ```bash
-#         # Download matching tokenizer for your model
-#         from transformers import AutoTokenizer
-#         tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
-#         tokenizer.save_pretrained("models/ar")  # or models/en
-#         ```
-        
-#         **Option 2: Retrain with matching vocab**
-#         - Ensure tokenizer and model use same vocabulary file
-        
-#         **Current Solution:**
-#         - Filtering out-of-vocabulary tokens
-#         - Using fallback sentiment analysis when needed
-#         """)
-# else:
-#     st.sidebar.success("✅ Tokenizer-Model Compatible")
+    # قواعد للإيموجي الإيجابية القوية
+    strong_positive_emojis = ['🎉', '❤', '😍', '🥰', '🔥', '👏', '😂', '🤣', '✨', '💕', '😘', '😊']
+    emoji_count = sum([original_text.count(emoji) for emoji in strong_positive_emojis])
+    if emoji_count >= 2:
+        if sentiment == "محايد":
+            return "إيجابي", max(confidence, 0.85)
+        elif sentiment == "سلبي" and emoji_count >= 3:
+            return "إيجابي", max(confidence, 0.80)
+    
+    # قواعد للكلمات الإيجابية القوية
+    strong_positive_words = ['رائع', 'جميل', 'ممتاز', 'روعة', 'يجنن', 'أحب', 'بحب', 'جامد', 'تحفة', 'حبيبتي']
+    positive_count = sum([1 for word in strong_positive_words if word in original_text])
+    if positive_count >= 1 and sentiment == "محايد":
+        return "إيجابي", max(confidence, 0.75)
+    
+    # قواعد للكلمات السلبية القوية
+    strong_negative_words = ['مخرب', 'وحش', 'سيء', 'فظيع', 'أكره', 'كرهت', 'قبيح', 'غبي']
+    if any(word in original_text for word in strong_negative_words):
+        if sentiment == "محايد":
+            return "سلبي", max(confidence, 0.80)
+        elif sentiment == "إيجابي" and confidence < 0.7:
+            return "سلبي", max(confidence, 0.75)
+    
+    # قواعد للأسئلة البسيطة
+    question_patterns = ['ايش اسم', 'مين', 'وين', 'كيف', 'متى', 'ممكن اعرف', 'كم حلقة', 'شو اسم']
+    if any(pattern in original_text for pattern in question_patterns):
+        return "محايد", max(confidence, 0.70)
+    
+    # قواعد لعبارات الشكر والتقدير
+    thanks_patterns = ['شكرا', 'مشكور', 'الف شكر', 'يعطيك', 'بارك الله', 'جزاك الله']
+    if any(pattern in original_text for pattern in thanks_patterns):
+        return "إيجابي", max(confidence, 0.85)
+    
+    # إذا كانت الثقة منخفضة جداً، استخدم التحليل الاحتياطي
+    if confidence < 0.4:
+        return get_enhanced_fallback_sentiment(text, "arabic")[:2]
+    
+    return sentiment, confidence
 
-# Add a toggle for debugging
-# debug_mode = st.sidebar.checkbox("🐛 Debug Mode", help="Show detailed processing info")
-
-def predict_sentiment(text, language):
+def improved_predict_sentiment(text, language, model, tokenizer):
+    """دالة محسنة لتحليل المشاعر مع معالجة أفضل للعربية"""
     if not text.strip():
-        return " not defined" if language == "arabic" else "Unknown", 0.0, "⚪"
+        return "محايد" if language == "arabic" else "Neutral", 0.5, "🟡"
+    
+    original_text = text
+    
+    # تحسين النص للمعالجة
     if language.lower() == "arabic":
-        text = normalize_arabic(text)
+        processed_text = enhanced_normalize_arabic(text)
+    else:
+        processed_text = text.strip()
+    
     try:
-        # Clean and preprocess text
-        text = text.strip()
-        if len(text) > 500:  # Limit text length
-            text = text[:500]
+        # محاولة التنبؤ بالنموذج
+        if len(processed_text) > 500:
+            processed_text = processed_text[:500]
         
-        # Get vocabulary size from model config
         model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
         
-        # Tokenize with additional safety checks
-        try:
-            inputs = tokenizer(
-                text, 
-                return_tensors="pt", 
-                truncation=True, 
-                padding=True, 
-                max_length=512,
-                add_special_tokens=True,
-                return_attention_mask=True
-            )
-            
-            # CRITICAL FIX: Filter out-of-vocabulary tokens
-            input_ids = inputs['input_ids'][0]
-            attention_mask = inputs['attention_mask'][0]
-            
-            # Replace OOV tokens with [UNK] token ID (usually 1 or 100)
-            unk_token_id = tokenizer.unk_token_id if tokenizer.unk_token_id is not None else 1
-            
-            # Create mask for valid tokens (within vocab range)
-            valid_mask = input_ids < model_vocab_size
-            
-            # Replace invalid tokens with UNK token
-            filtered_input_ids = torch.where(valid_mask, input_ids, torch.tensor(unk_token_id))
-            
-            # Update inputs with filtered token IDs
-            inputs['input_ids'] = filtered_input_ids.unsqueeze(0)
-            
-            # Verify all tokens are now within range
-            if torch.any(inputs['input_ids'] >= model_vocab_size):
-                st.warning("Still found OOV tokens after filtering, using fallback")
-                return get_fallback_sentiment(text, language)
-                
-        except Exception as tokenizer_error:
-            st.error(f"Tokenization error: {str(tokenizer_error)}")
-            return get_fallback_sentiment(text, language)
+        inputs = tokenizer(
+            processed_text, 
+            return_tensors="pt", 
+            truncation=True, 
+            padding=True, 
+            max_length=512,
+            add_special_tokens=True,
+            return_attention_mask=True
+        )
         
-        # Model inference
+        # تصفية الرموز خارج المفردات
+        input_ids = inputs['input_ids'][0]
+        unk_token_id = tokenizer.unk_token_id if tokenizer.unk_token_id is not None else 1
+        valid_mask = input_ids < model_vocab_size
+        filtered_input_ids = torch.where(valid_mask, input_ids, torch.tensor(unk_token_id))
+        inputs['input_ids'] = filtered_input_ids.unsqueeze(0)
+        
+        if torch.any(inputs['input_ids'] >= model_vocab_size):
+            return get_enhanced_fallback_sentiment(original_text, language)
+        
+        # التنبؤ بالنموذج
         with torch.no_grad():
-            try:
-                outputs = model(**inputs)
-                logits = outputs.logits
-                
-                # Verify model output dimensions
-                if logits.shape[1] != model.config.num_labels:
-                    return get_fallback_sentiment(text, language)
-                
-                probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-                predicted_class = torch.argmax(logits, dim=1).item()
-                
-                # Ensure predicted class is valid
-                if predicted_class >= model.config.num_labels or predicted_class < 0:
-                    return get_fallback_sentiment(text, language)
-                
-                confidence = probabilities[predicted_class].item()
-                
-            except Exception as model_error:
-                # Model still failed, use fallback
-                return get_fallback_sentiment(text, language)
+            outputs = model(**inputs)
+            logits = outputs.logits
+            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+            predicted_class = torch.argmax(logits, dim=1).item()
+            confidence = probabilities[predicted_class].item()
         
-        # Label mapping with safer access
-        try:
-            # Use integer keys for id2label access
-            if hasattr(model.config, 'id2label') and model.config.id2label:
-                # Try integer key first, then string key
-                model_label = None
-                if predicted_class in model.config.id2label:
-                    model_label = model.config.id2label[predicted_class]
-                elif str(predicted_class) in model.config.id2label:
-                    model_label = model.config.id2label[str(predicted_class)]
-                label_normalization = {
-                    "LABEL_0": "Negative",
-                    "LABEL_1": "Positive",
-                    "LABEL_2": "Neutral",
-                    "0": "Negative",
-                    "2": "Positive",
-                    "1": "Neutral"
-                }
-                if model_label in label_normalization:
-                    model_label = label_normalization[model_label]
-                if model_label:
-                    # Map English model labels to desired language
-                    if language == "arabic":
-                        label_mapping = {
-                            "Negative": "سلبي",
-                            "Positive": "إيجابي", 
-                            "Neutral": "محايد"
-                        }
-                        sentiment_label = label_mapping.get(model_label, model_label)
-                    else:
-                        sentiment_label = model_label
-                    
-                    # Color mapping
-                    color_mapping = {
-                        "Negative": "🔴", "سلبي": "🔴",
-                        "Positive": "🟢", "إيجابي": "🟢", 
-                        "Neutral": "🟡", "محايد": "🟡"
+        # تحويل التسميات
+        if hasattr(model.config, 'id2label') and model.config.id2label:
+            model_label = None
+            if predicted_class in model.config.id2label:
+                model_label = model.config.id2label[predicted_class]
+            elif str(predicted_class) in model.config.id2label:
+                model_label = model.config.id2label[str(predicted_class)]
+            
+            label_normalization = {
+                "LABEL_0": "Negative", "LABEL_1": "Positive", "LABEL_2": "Neutral",
+                "0": "Negative", "1": "Neutral", "2": "Positive"
+            }
+            
+            if model_label in label_normalization:
+                model_label = label_normalization[model_label]
+            
+            if model_label:
+                if language == "arabic":
+                    label_mapping = {
+                        "Negative": "سلبي", "Positive": "إيجابي", "Neutral": "محايد"
                     }
-                    color = color_mapping.get(sentiment_label, "⚪")
+                    sentiment_label = label_mapping.get(model_label, model_label)
                 else:
-                    raise ValueError("Could not find model label")
-                    
-            else:
-                raise ValueError("No id2label found")
+                    sentiment_label = model_label
                 
-        except Exception:
-            # Fallback label mapping
+                color_mapping = {
+                    "Negative": "🔴", "سلبي": "🔴",
+                    "Positive": "🟢", "إيجابي": "🟢", 
+                    "Neutral": "🟡", "محايد": "🟡"
+                }
+                color = color_mapping.get(sentiment_label, "⚪")
+            else:
+                raise ValueError("Could not find model label")
+        else:
+            # تسميات احتياطية
             if language == "arabic":
-                labels = ["سلبي", "محايد", "إيجابي"]  # 0=Negative, 1=Neutral, 2=Positive
+                labels = ["سلبي", "محايد", "إيجابي"]
                 colors = ["🔴", "🟡", "🟢"]
             else:
-                labels = ["Negative", "Neutral", "Positive"]  # 0=Negative, 1=Neutral, 2=Positive
+                labels = ["Negative", "Neutral", "Positive"]
                 colors = ["🔴", "🟡", "🟢"]
             
             if predicted_class >= len(labels):
-                return get_fallback_sentiment(text, language)
-                
+                return get_enhanced_fallback_sentiment(original_text, language)
+            
             sentiment_label = labels[predicted_class]
             color = colors[predicted_class]
         
+        # معالجة لاحقة لتحسين الدقة
+        final_sentiment, final_confidence = post_process_sentiment(
+            original_text, sentiment_label, confidence
+        )
         return sentiment_label, confidence, color
             
     except Exception:
