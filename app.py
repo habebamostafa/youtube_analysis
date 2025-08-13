@@ -118,23 +118,47 @@ def predict_sentiment(text, language):
             
             confidence = probabilities[predicted_class].item()
             
-            # Define labels and colors
-            if language == "arabic":
-                labels = ["سلبي", "إيجابي", "محايد"]
-                colors = ["🔴", "🟢", "🟡"]
-            else:
-                labels = ["Negative", "Positive", "Neutral"]
-                colors = ["🔴", "🟢", "🟡"]
-            
-            # Ensure we have enough labels
-            if predicted_class >= len(labels):
-                return "غير محدد", 0.0, "⚪"
+            # Get labels from model config if available
+            if hasattr(model.config, 'id2label'):
+                # Use model's native labels
+                label = model.config.id2label[str(predicted_class)]
                 
-            return labels[predicted_class], confidence, colors[predicted_class]
+                # Translate to Arabic if needed
+                if language == "arabic":
+                    translation_map = {
+                        "Negative": "سلبي",
+                        "Neutral": "محايد", 
+                        "Positive": "إيجابي"
+                    }
+                    label = translation_map.get(label, label)
+                
+                # Set colors based on original English labels
+                color_map = {
+                    "Negative": "🔴",
+                    "Neutral": "🟡",
+                    "Positive": "🟢"
+                }
+                color = color_map.get(model.config.id2label[str(predicted_class)], "⚪")
+                
+                return label, confidence, color
+            else:
+                # Fallback to hardcoded labels if no id2label mapping
+                if language == "arabic":
+                    labels = ["سلبي", "محايد", "إيجابي"]
+                    colors = ["🔴", "🟡", "🟢"]
+                else:
+                    labels = ["Negative", "Neutral", "Positive"]
+                    colors = ["🔴", "🟡", "🟢"]
+                
+                if predicted_class >= len(labels):
+                    return "غير محدد", 0.0, "⚪"
+                    
+                return labels[predicted_class], confidence, colors[predicted_class]
             
     except Exception as e:
         st.error(f"Error in sentiment analysis: {str(e)}")
         return "خطأ", 0.0, "⚪"
+    
     
 st.write(f"Model configuration: {model.config}")
 st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
