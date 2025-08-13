@@ -159,11 +159,11 @@ def test_model_functionality():
             st.write(f"Input: '{text}'")
             st.write(f"Expected: {expected} | Got: {sentiment} {emoji} ({conf:.2f})")
             st.write("---")
-DEBUG = True
+# DEBUG = True
 
-if DEBUG:
-    test_model_functionality()
-    st.stop()
+# if DEBUG:
+#     test_model_functionality()
+#     st.stop()
 
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
