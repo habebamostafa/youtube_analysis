@@ -636,6 +636,7 @@ def main():
                         filter_sentiment = st.selectbox(
                             filter_label,
                             [all_option] + list(df['sentiment'].unique())
+                        )
                         
                         if filter_sentiment != all_option:
                             filtered_df = df[df['sentiment'] == filter_sentiment]
