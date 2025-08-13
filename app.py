@@ -57,22 +57,19 @@ def load_model(language):
     lang_code = "ar" if language == "Arabic" else "en"
     model_path = f"models/{lang_code}"
     
-    # Verify all files exist
-    required_files = ["config.json", "model.safetensors", "vocab.txt"]
-    missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
-    
-    if missing_files:
-        st.error(f"Missing files: {', '.join(missing_files)}")
-        return None, None
-    
     try:
-        # Force local files only
         tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
         model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
         
         # Debug output
-        st.write(f"Model loaded with {model.config.num_labels} classes")
-        st.write(f"Model class: {model.__class__.__name__}")
+        st.write("Model loaded successfully")
+        st.write(f"Model architecture: {model.__class__.__name__}")
+        st.write(f"Number of classes: {model.config.num_labels}")
+        
+        if hasattr(model.config, 'id2label'):
+            st.write("Class labels:", model.config.id2label)
+        else:
+            st.warning("No class label mapping found in model config")
         
         model.eval()
         return model, tokenizer
@@ -103,30 +100,31 @@ def predict_sentiment(text, language):
         inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
         
         with torch.no_grad():
-            # Get model outputs
             outputs = model(**inputs)
             logits = outputs.logits
             
-            # Apply softmax to get probabilities
-            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-            
-            # Get predicted class
-            predicted_class = torch.argmax(probabilities).item()
-            confidence = probabilities[predicted_class].item()
-            
-            # Verify we have valid class indices
-            num_classes = model.config.num_labels
-            if predicted_class >= num_classes:
-                st.error(f"Model predicted invalid class {predicted_class} (max is {num_classes-1})")
+            # Verify model output dimensions
+            if logits.shape[1] != model.config.num_labels:
+                st.error(f"Model output dimension mismatch! Expected {model.config.num_labels} classes, got {logits.shape[1]}")
                 return "خطأ", 0.0, "⚪"
             
-            # Define labels based on language
-            if language_code == "arabic":
-                labels = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
+            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+            predicted_class = torch.argmax(probabilities).item()
+            
+            # Ensure predicted class is valid
+            if predicted_class >= model.config.num_labels:
+                st.error(f"Invalid class prediction: {predicted_class} (max is {model.config.num_labels-1})")
+                return "خطأ", 0.0, "⚪"
+            
+            confidence = probabilities[predicted_class].item()
+            
+            # Define labels and colors
+            if language == "arabic":
+                labels = ["سلبي", "إيجابي", "محايد"]
+                colors = ["🔴", "🟢", "🟡"]
             else:
-                labels= {0: "Negative", 1: "Positive", 2: "Neutral"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
-
+                labels = ["Negative", "Positive", "Neutral"]
+                colors = ["🔴", "🟢", "🟡"]
             
             # Ensure we have enough labels
             if predicted_class >= len(labels):
@@ -137,6 +135,9 @@ def predict_sentiment(text, language):
     except Exception as e:
         st.error(f"Error in sentiment analysis: {str(e)}")
         return "خطأ", 0.0, "⚪"
+    
+st.write(f"Model configuration: {model.config}")
+st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
     
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
