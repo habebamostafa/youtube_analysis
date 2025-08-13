@@ -11,25 +11,6 @@ from youtube_comment_downloader import YoutubeCommentDownloader
 import gdown
 import os
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
-
-# def download_model_files():
-#     github_files = [
-#         "en/config.json",
-#         "en/special_tokens_map.json",
-#         "en/tokenizer_config.json",
-#         "en/vocab.txt",
-#         "ar/config.json",
-#         "ar/special_tokens_map.json",
-#         "ar/tokenizer_config.json",
-#         "ar/vocab.txt",
-#     ]
-    
-#     if not os.path.exists("model.safetensors"):
-#         model_url_en = "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-"
-#         model_url_ar = "https://drive.google.com/uc?id=1ig3la7xbgKI0Q9iz79b2_OD5cpf_Jx-X"
-
-#         gdown.download(model_url_en, "model.safetensors", quiet=False)
 import shutil
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
@@ -181,25 +162,6 @@ def extract_video_id(url):
         if match:
             return match.group(1)
     return None
-
-# def get_comments_without_api(video_url, max_comments=100):
-#     """جلب التعليقات بدون استخدام API"""
-#     video_id = extract_video_id(video_url)
-#     downloader = YoutubeCommentDownloader()
-#     comments = []
-#     try:
-#         for comment in downloader.get_comments_from_url(f"https://www.youtube.com/watch?v={video_id}"):
-#             comments.append({
-#                 'author': comment['author'],
-#                 'text': comment['text'],
-#                 'likes': int(comment['votes']),
-#                 'published': ''
-#             })
-#             if len(comments) >= max_comments:
-#                 break
-#     except Exception as e:
-#         st.error(f"Error during scraping: {str(e)}")
-#     return comments
 
 def get_comments_without_api(video_url, max_comments=100):
     video_id = extract_video_id(video_url)
