@@ -238,7 +238,16 @@ def predict_sentiment(text, language):
                     model_label = model.config.id2label[predicted_class]
                 elif str(predicted_class) in model.config.id2label:
                     model_label = model.config.id2label[str(predicted_class)]
-                
+                label_normalization = {
+                    "LABEL_0": "Negative",
+                    "LABEL_1": "Positive",
+                    "LABEL_2": "Neutral",
+                    "0": "Negative",
+                    "1": "Positive",
+                    "2": "Neutral"
+                }
+                if model_label in label_normalization:
+                    model_label = label_normalization[model_label]
                 if model_label:
                     # Map English model labels to desired language
                     if language == "arabic":
