@@ -134,12 +134,12 @@ def predict_sentiment(text, language):
                 return "خطأ", 0.0, "⚪"
             
             # Define labels based on language
-            if language == "arabic":
-                labels = ["سلبي", "إيجابي", "محايد"]
-                colors = ["🔴", "🟢", "🟡"]
+            if language_code == "arabic":
+                labels = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
             else:
-                labels = ["Negative", "Positive", "Neutral"] 
-                colors = ["🔴", "🟢", "🟡"]
+                labels= {0: "Negative", 1: "Positive", 2: "Neutral"}
+            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+
             
             # Ensure we have enough labels
             if predicted_class >= len(labels):
@@ -185,46 +185,6 @@ def get_youtube_comments(video_id, api_key=None, max_comments=100):
     """Fetch video comments from YouTube"""
     return get_comments_without_api(f"https://www.youtube.com/watch?v={video_id}", max_comments)
 
-    # youtube = build('youtube', 'v3', developerKey=api_key)
-
-    # comments = []
-    # try:
-    #     request = youtube.commentThreads().list(
-    #         part='snippet',
-    #         videoId=video_id,
-    #         maxResults=min(max_comments, 100),
-    #         order='relevance'
-    #     )
-
-    #     while request and len(comments) < max_comments:
-    #         response = request.execute()
-
-    #         for item in response['items']:
-    #             comment = item['snippet']['topLevelComment']['snippet']
-    #             comments.append({
-    #                 'author': comment['authorDisplayName'],
-    #                 'text': comment['textDisplay'],
-    #                 'likes': comment['likeCount'],
-    #                 'published': comment['publishedAt']
-    #             })
-
-    #         # Fetch more comments if available
-    #         if 'nextPageToken' in response and len(comments) < max_comments:
-    #             request = youtube.commentThreads().list(
-    #                 part='snippet',
-    #                 videoId=video_id,
-    #                 pageToken=response['nextPageToken'],
-    #                 maxResults=min(max_comments - len(comments), 100),
-    #                 order='relevance'
-    #             )
-    #         else:
-    #             break
-
-    # except Exception as e:
-    #     st.error(f"Error fetching comments: {str(e)}")
-    #     return []
-
-    # return comments
 
 def analyze_comments(comments, language_code="english"):
     """Analyze sentiment of comments with language support"""
@@ -332,7 +292,7 @@ single_comment = st.sidebar.text_area("Enter a comment to analyze:")
 
 if st.sidebar.button("Analyze Comment"):
     if single_comment:
-        sentiment_id, confidence = predict_sentiment(single_comment)
+        sentiment_id, confidence, emoji = predict_sentiment(single_comment, language_code)
         label_map_ar = {0: "Negative", 1: "Positive", 2: "Neutral"}
         colors = {0: "🔴", 1: "🟢", 2: "🟡"}
 
