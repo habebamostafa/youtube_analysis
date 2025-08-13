@@ -139,11 +139,8 @@ def predict_sentiment(text, language):
             
             # Translate to Arabic if needed
             if language.lower() == "arabic":
-                label_map = {
-                    "Negative": "سلبي",
-                    "Neutral": "محايد",
-                    "Positive": "إيجابي"
-                }
+                label_map = model.config.id2label
+
                 label = label_map.get(label, label)
             
             # Get emoji
