@@ -157,7 +157,13 @@ def predict_sentiment(text, language):
 
 st.write(f"Model configuration: {model.config}")
 st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
-    
+def clean_text(text):
+    """Basic text cleaning"""
+    text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)  # Remove URLs
+    text = re.sub(r'\@\w+|\#', '', text)  # Remove mentions and hashtags
+    text = text.strip()
+    return text if text else "غير محدد"
+   
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
