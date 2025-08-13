@@ -91,70 +91,57 @@ if model is None or tokenizer is None:
     st.error("Failed to load model - please check the error messages above")
     st.stop()
 def predict_sentiment(text, language):
-    """تحليل المشاعر للنص"""
     if not text.strip():
         return "غير محدد", 0.0, "⚪"
-    
+
     try:
-        # Tokenize input
         inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-        
+
         with torch.no_grad():
             outputs = model(**inputs)
             logits = outputs.logits
-            
-            # Verify model output dimensions
+
             if logits.shape[1] != model.config.num_labels:
-                st.error(f"Model output dimension mismatch! Expected {model.config.num_labels} classes, got {logits.shape[1]}")
+                st.error(f"Mismatch: model expects {model.config.num_labels} labels but got {logits.shape[1]}")
                 return "خطأ", 0.0, "⚪"
-            
+
             probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
             predicted_class = torch.argmax(probabilities).item()
-            
-            # Ensure predicted class is valid
+
             if predicted_class >= model.config.num_labels:
-                st.error(f"Invalid class prediction: {predicted_class} (max is {model.config.num_labels-1})")
+                st.error(f"Predicted class {predicted_class} is out of range")
                 return "خطأ", 0.0, "⚪"
-            
+
             confidence = probabilities[predicted_class].item()
-            
-            # Get labels from model config if available
-            if hasattr(model.config, 'id2label'):
-                # Use model's native labels
-                label = model.config.id2label[str(predicted_class)]
-                
-                # Translate to Arabic if needed
-                if language == "arabic":
-                    translation_map = {
-                        "Negative": "سلبي",
-                        "Neutral": "محايد", 
-                        "Positive": "إيجابي"
-                    }
-                    label = translation_map.get(label, label)
-                
-                # Set colors based on original English labels
-                color_map = {
-                    "Negative": "🔴",
-                    "Neutral": "🟡",
-                    "Positive": "🟢"
-                }
-                color = color_map.get(model.config.id2label[str(predicted_class)], "⚪")
-                
-                return label, confidence, color
+    
+            # تحضير labels و colors بناءً على الموديل نفسه
+            id2label = model.config.id2label
+            if isinstance(list(id2label.keys())[0], int):
+                label = id2label[predicted_class]
             else:
-                # Fallback to hardcoded labels if no id2label mapping
-                if language == "arabic":
-                    labels = ["سلبي", "محايد", "إيجابي"]
-                    colors = ["🔴", "🟡", "🟢"]
-                else:
-                    labels = ["Negative", "Neutral", "Positive"]
-                    colors = ["🔴", "🟡", "🟢"]
-                
-                if predicted_class >= len(labels):
-                    return "غير محدد", 0.0, "⚪"
-                    
-                return labels[predicted_class], confidence, colors[predicted_class]
-            
+                label = id2label[str(predicted_class)]
+
+            # ترجمة لو اللغة عربية
+            if language.lower() == "arabic":
+                label_map = {
+                    "Negative": "سلبي",
+                    "Positive": "إيجابي",
+                    "Neutral": "محايد"
+                }
+                label = label_map.get(label, label)
+
+            color_map = {
+                "Negative": "🔴",
+                "سلبي": "🔴",
+                "Positive": "🟢",
+                "إيجابي": "🟢",
+                "Neutral": "🟡",
+                "محايد": "🟡"
+            }
+            color = color_map.get(label, "⚪")
+
+            return label, confidence, color
+
     except Exception as e:
         st.error(f"Error in sentiment analysis: {str(e)}")
         return "خطأ", 0.0, "⚪"
