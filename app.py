@@ -64,12 +64,12 @@ def load_model(language):
         model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
         
         # Validate tokenizer and model compatibility
-        if hasattr(tokenizer, 'vocab_size'):
-            tokenizer_vocab_size = tokenizer.vocab_size
-        else:
-            tokenizer_vocab_size = len(tokenizer.get_vocab()) if hasattr(tokenizer, 'get_vocab') else 30000
+        # if hasattr(tokenizer, 'vocab_size'):
+        #     tokenizer_vocab_size = tokenizer.vocab_size
+        # else:
+        #     tokenizer_vocab_size = len(tokenizer.get_vocab()) if hasattr(tokenizer, 'get_vocab') else 30000
         
-        model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
+        # model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
         
         # Debug output
         # st.write("✅ Model loaded successfully")
@@ -107,7 +107,7 @@ language = st.sidebar.radio(
 
 # Add vocab mismatch warning and solution
 st.sidebar.markdown("---")
-st.sidebar.header("⚙️ Model Status")
+# st.sidebar.header("⚙️ Model Status")
 
 language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language) 
@@ -300,22 +300,22 @@ def get_fallback_sentiment(text, language):
         return ("محايد" if language == "arabic" else "Neutral"), 0.5, "🟡"
 
 # Display model info and run validation
-if model is not None and tokenizer is not None:
-    st.write(f"Model configuration: {model.config}")
-    st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
+# if model is not None and tokenizer is not None:
+#     st.write(f"Model configuration: {model.config}")
+#     st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
     
-    # Test the model with a simple sentence
-    st.subheader("🧪 Model Test")
-    test_text = "This is a test sentence" if language == "English" else "هذه جملة تجريبية"
+#     # Test the model with a simple sentence
+#     st.subheader("🧪 Model Test")
+#     test_text = "This is a test sentence" if language == "English" else "هذه جملة تجريبية"
     
-    with st.expander("Click to run model test"):
-        try:
-            test_result = predict_sentiment(test_text, language_code)
-            st.success(f"✅ Model test successful: {test_result}")
-        except Exception as e:
-            st.error(f"❌ Model test failed: {str(e)}")
-else:
-    st.error("❌ Model or tokenizer not loaded properly!")
+#     with st.expander("Click to run model test"):
+#         try:
+#             test_result = predict_sentiment(test_text, language_code)
+#             st.success(f"✅ Model test successful: {test_result}")
+#         except Exception as e:
+#             st.error(f"❌ Model test failed: {str(e)}")
+# else:
+#     st.error("❌ Model or tokenizer not loaded properly!")
 
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
