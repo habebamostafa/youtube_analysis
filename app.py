@@ -77,7 +77,8 @@ def load_model(language):
         st.write(f"Number of classes: {model.config.num_labels}")
         st.write(f"Tokenizer vocab size: {tokenizer_vocab_size}")
         st.write(f"Model vocab size: {model_vocab_size}")
-        
+        model.resize_token_embeddings(len(tokenizer))
+
         # Check vocab size compatibility
         if tokenizer_vocab_size != model_vocab_size:
             st.warning(f"⚠️ Vocab size mismatch! Tokenizer: {tokenizer_vocab_size}, Model: {model_vocab_size}")
