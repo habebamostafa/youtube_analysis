@@ -51,8 +51,6 @@ def download_model_files(language):
             gdown.download(model_files[lang_code]["url"], model_files[lang_code]["dest"], quiet=False)
         except Exception as e:
             st.error(f"خطأ في تحميل النموذج: {str(e)}")
-download_model_files("Arabic")
-download_model_files("English")
 
 @st.cache_resource
 def load_model(language):
