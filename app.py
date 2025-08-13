@@ -74,7 +74,7 @@ def download_model_files(language):
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
     lang_code = "ar" if language == "Arabic" else "en"
-    model_path = f"models/{lang_code}"
+    model_path = f"{lang_code}"
     
     # التأكد من وجود جميع الملفات المطلوبة
     required_files = [
