@@ -120,34 +120,34 @@ if model is None or tokenizer is None:
 model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
 tokenizer_vocab_size = tokenizer.vocab_size if hasattr(tokenizer, 'vocab_size') else len(tokenizer.get_vocab()) if hasattr(tokenizer, 'get_vocab') else 64000
 
-if tokenizer_vocab_size != model_vocab_size:
-    st.sidebar.warning(f"⚠️ Vocab Mismatch Detected!")
-    st.sidebar.info(f"Tokenizer: {tokenizer_vocab_size:,} tokens")
-    st.sidebar.info(f"Model: {model_vocab_size:,} tokens")
-    st.sidebar.markdown("**Status:** Using token filtering + fallback")
+# if tokenizer_vocab_size != model_vocab_size:
+#     st.sidebar.warning(f"Vocab Mismatch Detected!")
+#     st.sidebar.info(f"Tokenizer: {tokenizer_vocab_size:,} tokens")
+#     st.sidebar.info(f"Model: {model_vocab_size:,} tokens")
+#     st.sidebar.markdown("**Status:** Using token filtering + fallback")
     
-    with st.sidebar.expander("🔧 How to Fix This"):
-        st.markdown("""
-        **Option 1: Use a compatible tokenizer**
-        ```bash
-        # Download matching tokenizer for your model
-        from transformers import AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
-        tokenizer.save_pretrained("models/ar")  # or models/en
-        ```
+#     with st.sidebar.expander("🔧 How to Fix This"):
+#         st.markdown("""
+#         **Option 1: Use a compatible tokenizer**
+#         ```bash
+#         # Download matching tokenizer for your model
+#         from transformers import AutoTokenizer
+#         tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+#         tokenizer.save_pretrained("models/ar")  # or models/en
+#         ```
         
-        **Option 2: Retrain with matching vocab**
-        - Ensure tokenizer and model use same vocabulary file
+#         **Option 2: Retrain with matching vocab**
+#         - Ensure tokenizer and model use same vocabulary file
         
-        **Current Solution:**
-        - Filtering out-of-vocabulary tokens
-        - Using fallback sentiment analysis when needed
-        """)
-else:
-    st.sidebar.success("✅ Tokenizer-Model Compatible")
+#         **Current Solution:**
+#         - Filtering out-of-vocabulary tokens
+#         - Using fallback sentiment analysis when needed
+#         """)
+# else:
+#     st.sidebar.success("✅ Tokenizer-Model Compatible")
 
 # Add a toggle for debugging
-debug_mode = st.sidebar.checkbox("🐛 Debug Mode", help="Show detailed processing info")
+# debug_mode = st.sidebar.checkbox("🐛 Debug Mode", help="Show detailed processing info")
 
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص - Robust version with vocab filtering"""
