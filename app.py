@@ -93,7 +93,7 @@ model, tokenizer = load_model(language)
 if model is None or tokenizer is None:
     st.error("Failed to load model - please check the error messages above")
     st.stop()
-def predict_sentiment(model, tokenizer, text):
+def predict_sentiment(text, language):
     # تجهيز النص
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
 
@@ -106,15 +106,25 @@ def predict_sentiment(model, tokenizer, text):
     if hasattr(model.config, "id2label") and model.config.id2label:
         labels = [model.config.id2label[i] for i in range(len(model.config.id2label))]
     else:
-        labels = [str(i) for i in range(logits.shape[-1])]  # fallback
+        labels = [str(i) for i in range(logits.shape[-1])]
 
-    # التأكد من أن الـ predicted_class_id صالح
+    # التأكد من أن الـ index صالح
     if 0 <= predicted_class_id < len(labels):
         predicted_label = labels[predicted_class_id]
     else:
         predicted_label = "Unknown"
 
+    # ترجمة الفئات إذا كانت اللغة عربية
+    translations = {
+        "positive": "إيجابي",
+        "negative": "سلبي",
+        "neutral": "محايد"
+    }
+    if language.lower() == "ar":
+        predicted_label = translations.get(predicted_label.lower(), predicted_label)
+
     return predicted_label
+
 
 
 
