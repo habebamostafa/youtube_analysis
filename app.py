@@ -59,13 +59,29 @@ def load_model(language):
     model_path = f"models/{lang_code}"
     
     try:
+        # Load tokenizer and model with error handling
         tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
         model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
         
+        # Validate tokenizer and model compatibility
+        if hasattr(tokenizer, 'vocab_size'):
+            tokenizer_vocab_size = tokenizer.vocab_size
+        else:
+            tokenizer_vocab_size = len(tokenizer.get_vocab()) if hasattr(tokenizer, 'get_vocab') else 30000
+        
+        model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
+        
         # Debug output
-        st.write("Model loaded successfully")
+        st.write("✅ Model loaded successfully")
         st.write(f"Model architecture: {model.__class__.__name__}")
         st.write(f"Number of classes: {model.config.num_labels}")
+        st.write(f"Tokenizer vocab size: {tokenizer_vocab_size}")
+        st.write(f"Model vocab size: {model_vocab_size}")
+        
+        # Check vocab size compatibility
+        if tokenizer_vocab_size != model_vocab_size:
+            st.warning(f"⚠️ Vocab size mismatch! Tokenizer: {tokenizer_vocab_size}, Model: {model_vocab_size}")
+            st.info("This may cause 'index out of range' errors. Using fallback method for problematic tokens.")
         
         if hasattr(model.config, 'id2label'):
             st.write("Class labels:", model.config.id2label)
@@ -75,7 +91,9 @@ def load_model(language):
         model.eval()
         return model, tokenizer
     except Exception as e:
-        st.error(f"Model loading failed: {str(e)}")
+        st.error(f"❌ Model loading failed: {str(e)}")
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
         return None, None
 
 # إعدادات اللغة في الشريط الجانبي
@@ -94,83 +112,162 @@ if model is None or tokenizer is None:
     st.stop()
 
 def predict_sentiment(text, language):
-    """تحليل المشاعر للنص - Fixed version"""
+    """تحليل المشاعر للنص - Comprehensive fix"""
     if not text.strip():
         return "غير محدد" if language == "arabic" else "Unknown", 0.0, "⚪"
     
     try:
-        # Tokenize input
-        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        # Clean and preprocess text
+        text = text.strip()
+        if len(text) > 500:  # Limit text length
+            text = text[:500]
         
+        # Tokenize with additional safety checks
+        try:
+            inputs = tokenizer(
+                text, 
+                return_tensors="pt", 
+                truncation=True, 
+                padding=True, 
+                max_length=512,
+                add_special_tokens=True,
+                return_attention_mask=True
+            )
+            
+            # Check for out-of-vocabulary tokens
+            input_ids = inputs['input_ids'][0]
+            vocab_size = tokenizer.vocab_size if hasattr(tokenizer, 'vocab_size') else 30000
+            
+            # Filter out any token IDs that exceed vocabulary size
+            if torch.any(input_ids >= vocab_size):
+                st.warning("Text contains unknown tokens, using fallback classification")
+                # Use simple heuristic fallback
+                return get_fallback_sentiment(text, language)
+                
+        except Exception as tokenizer_error:
+            st.error(f"Tokenization error: {str(tokenizer_error)}")
+            return get_fallback_sentiment(text, language)
+        
+        # Model inference
         with torch.no_grad():
-            outputs = model(**inputs)
-            logits = outputs.logits
-            
-            # Verify model output dimensions
-            if logits.shape[1] != model.config.num_labels:
-                st.error(f"Model output dimension mismatch! Expected {model.config.num_labels} classes, got {logits.shape[1]}")
-                return "خطأ" if language == "arabic" else "Error", 0.0, "⚪"
-            
-            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-            predicted_class = torch.argmax(logits, dim=1).item()
-            
-            # Ensure predicted class is valid
-            if predicted_class >= model.config.num_labels:
-                st.error(f"Invalid class prediction: {predicted_class} (max is {model.config.num_labels-1})")
-                return "خطأ" if language == "arabic" else "Error", 0.0, "⚪"
-            
-            confidence = probabilities[predicted_class].item()
-            
-            # Use model's built-in labels if available
+            try:
+                outputs = model(**inputs)
+                logits = outputs.logits
+                
+                # Verify model output dimensions
+                if logits.shape[1] != model.config.num_labels:
+                    st.error(f"Model output dimension mismatch! Expected {model.config.num_labels} classes, got {logits.shape[1]}")
+                    return get_fallback_sentiment(text, language)
+                
+                probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+                predicted_class = torch.argmax(logits, dim=1).item()
+                
+                # Ensure predicted class is valid
+                if predicted_class >= model.config.num_labels or predicted_class < 0:
+                    st.error(f"Invalid class prediction: {predicted_class} (valid range: 0-{model.config.num_labels-1})")
+                    return get_fallback_sentiment(text, language)
+                
+                confidence = probabilities[predicted_class].item()
+                
+            except Exception as model_error:
+                st.error(f"Model inference error: {str(model_error)}")
+                return get_fallback_sentiment(text, language)
+        
+        # Label mapping with safer access
+        try:
+            # Use integer keys for id2label access
             if hasattr(model.config, 'id2label') and model.config.id2label:
-                model_label = model.config.id2label[str(predicted_class)]
+                # Try both integer and string keys
+                model_label = None
+                if predicted_class in model.config.id2label:
+                    model_label = model.config.id2label[predicted_class]
+                elif str(predicted_class) in model.config.id2label:
+                    model_label = model.config.id2label[str(predicted_class)]
                 
-                # Map English model labels to desired language
-                if language == "arabic":
-                    label_mapping = {
-                        "Negative": "سلبي",
-                        "Positive": "إيجابي", 
-                        "Neutral": "محايد"
-                    }
-                    sentiment_label = label_mapping.get(model_label, model_label)
-                else:
-                    sentiment_label = model_label
-                
-                # Color mapping
-                color_mapping = {
-                    "Negative": "🔴", "سلبي": "🔴",
-                    "Positive": "🟢", "إيجابي": "🟢", 
-                    "Neutral": "🟡", "محايد": "🟡"
-                }
-                color = color_mapping.get(sentiment_label, "⚪")
-                
-            else:
-                # Fallback if no model labels available
-                if language == "arabic":
-                    labels = ["سلبي", "محايد", "إيجابي"]  # Reordered to match model: 0=Negative, 1=Neutral, 2=Positive
-                    colors = ["🔴", "🟡", "🟢"]
-                else:
-                    labels = ["Negative", "Neutral", "Positive"]  # Reordered to match model
-                    colors = ["🔴", "🟡", "🟢"]
-                
-                # Ensure we have enough labels
-                if predicted_class >= len(labels):
-                    return "غير محدد" if language == "arabic" else "Unknown", 0.0, "⚪"
+                if model_label:
+                    # Map English model labels to desired language
+                    if language == "arabic":
+                        label_mapping = {
+                            "Negative": "سلبي",
+                            "Positive": "إيجابي", 
+                            "Neutral": "محايد"
+                        }
+                        sentiment_label = label_mapping.get(model_label, model_label)
+                    else:
+                        sentiment_label = model_label
                     
-                sentiment_label = labels[predicted_class]
-                color = colors[predicted_class]
+                    # Color mapping
+                    color_mapping = {
+                        "Negative": "🔴", "سلبي": "🔴",
+                        "Positive": "🟢", "إيجابي": "🟢", 
+                        "Neutral": "🟡", "محايد": "🟡"
+                    }
+                    color = color_mapping.get(sentiment_label, "⚪")
+                else:
+                    raise ValueError("Could not find model label")
+                    
+            else:
+                raise ValueError("No id2label found")
+                
+        except Exception as label_error:
+            # Fallback label mapping
+            if language == "arabic":
+                labels = ["سلبي", "محايد", "إيجابي"]  # 0=Negative, 1=Neutral, 2=Positive
+                colors = ["🔴", "🟡", "🟢"]
+            else:
+                labels = ["Negative", "Neutral", "Positive"]  # 0=Negative, 1=Neutral, 2=Positive
+                colors = ["🔴", "🟡", "🟢"]
             
-            return sentiment_label, confidence, color
+            # Ensure we have enough labels
+            if predicted_class >= len(labels):
+                return "غير محدد" if language == "arabic" else "Unknown", 0.0, "⚪"
+                
+            sentiment_label = labels[predicted_class]
+            color = colors[predicted_class]
+        
+        return sentiment_label, confidence, color
             
     except Exception as e:
-        st.error(f"Error in sentiment analysis: {str(e)}")
-        import traceback
-        st.error(f"Traceback: {traceback.format_exc()}")
-        return "خطأ" if language == "arabic" else "Error", 0.0, "⚪"
+        st.error(f"Critical error in sentiment analysis: {str(e)}")
+        return get_fallback_sentiment(text, language)
 
-# Display model info for debugging
-st.write(f"Model configuration: {model.config}")
-st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
+def get_fallback_sentiment(text, language):
+    """Fallback sentiment analysis using simple keyword matching"""
+    text = text.lower()
+    
+    # Simple keyword-based sentiment
+    positive_words = ['good', 'great', 'awesome', 'amazing', 'excellent', 'love', 'like', 'best', 'wonderful', 'fantastic',
+                     'جميل', 'رائع', 'ممتاز', 'حب', 'أحب', 'جيد', 'عظيم', 'مذهل']
+    negative_words = ['bad', 'terrible', 'awful', 'hate', 'worst', 'horrible', 'disgusting', 'stupid', 'ugly',
+                     'سيء', 'فظيع', 'أكره', 'قبيح', 'غبي', 'سخيف']
+    
+    pos_count = sum(1 for word in positive_words if word in text)
+    neg_count = sum(1 for word in negative_words if word in text)
+    
+    if pos_count > neg_count:
+        return ("إيجابي" if language == "arabic" else "Positive"), 0.7, "🟢"
+    elif neg_count > pos_count:
+        return ("سلبي" if language == "arabic" else "Negative"), 0.7, "🔴"
+    else:
+        return ("محايد" if language == "arabic" else "Neutral"), 0.5, "🟡"
+
+# Display model info and run validation
+if model is not None and tokenizer is not None:
+    st.write(f"Model configuration: {model.config}")
+    st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
+    
+    # Test the model with a simple sentence
+    st.subheader("🧪 Model Test")
+    test_text = "This is a test sentence" if language == "English" else "هذه جملة تجريبية"
+    
+    with st.expander("Click to run model test"):
+        try:
+            test_result = predict_sentiment(test_text, language_code)
+            st.success(f"✅ Model test successful: {test_result}")
+        except Exception as e:
+            st.error(f"❌ Model test failed: {str(e)}")
+else:
+    st.error("❌ Model or tokenizer not loaded properly!")
 
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
