@@ -54,7 +54,6 @@ def download_model_files(language):
 download_model_files("Arabic")
 download_model_files("English")
 
-
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
@@ -68,8 +67,8 @@ def load_model(language):
                 st.error(f"❌ Missing required file: {file}")
                 return None, None
         # Load tokenizer and model with error handling
-        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-        model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = AutoModelForSequenceClassification.from_pretrained(model_path)
         
         # Validate tokenizer and model compatibility
         # if hasattr(tokenizer, 'vocab_size'):
