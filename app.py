@@ -237,8 +237,8 @@ def predict_sentiment(text, language):
                     "LABEL_1": "Positive",
                     "LABEL_2": "Neutral",
                     "0": "Negative",
-                    "1": "Positive",
-                    "2": "Neutral"
+                    "2": "Positive",
+                    "1": "Neutral"
                 }
                 if model_label in label_normalization:
                     model_label = label_normalization[model_label]
