@@ -121,7 +121,7 @@ language = st.sidebar.radio(
 )
 
 language_code = "arabic" if language == "Arabic" else "english"
-model, tokenizer = load_model(language)  # هنا يجب تمرير language وليس language_code
+model, tokenizer = load_model(language) 
 if model is None or tokenizer is None:
     st.error("Failed to load model - please check the error messages above")
     st.stop()
@@ -131,31 +131,33 @@ def predict_sentiment(text, language):
         return "غير محدد", 0.0, "⚪"
     
     try:
+        # Tokenize input
         inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+        
         with torch.no_grad():
+            # Get model outputs
             outputs = model(**inputs)
             logits = outputs.logits
             
-            # Get probabilities using softmax
-            predicted_class = torch.argmax(logits, dim=1).item()
-            
-            # Get the predicted class with highest probability
+            # Apply softmax to get probabilities
             probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
             
-            # Verify the predicted class is within valid range
-            num_labels = model.config.num_labels
-            if predicted_class >= num_labels:
-                st.error(f"Invalid class index {predicted_class} for model with {num_labels} labels")
-                predicted_class = num_labels - 1  # Fallback to last class
-            
+            # Get predicted class
+            predicted_class = torch.argmax(probabilities).item()
             confidence = probabilities[predicted_class].item()
             
-            # Define labels and colors based on language
+            # Verify we have valid class indices
+            num_classes = model.config.num_labels
+            if predicted_class >= num_classes:
+                st.error(f"Model predicted invalid class {predicted_class} (max is {num_classes-1})")
+                return "خطأ", 0.0, "⚪"
+            
+            # Define labels based on language
             if language == "arabic":
                 labels = ["سلبي", "إيجابي", "محايد"]
                 colors = ["🔴", "🟢", "🟡"]
             else:
-                labels = ["Negative", "Positive", "Neutral"]
+                labels = ["Negative", "Positive", "Neutral"] 
                 colors = ["🔴", "🟢", "🟡"]
             
             # Ensure we have enough labels
@@ -165,7 +167,7 @@ def predict_sentiment(text, language):
             return labels[predicted_class], confidence, colors[predicted_class]
             
     except Exception as e:
-        st.error(f"خطأ في تحليل المشاعر: {str(e)}")
+        st.error(f"Error in sentiment analysis: {str(e)}")
         return "خطأ", 0.0, "⚪"
     
 def extract_video_id(url):
