@@ -2,19 +2,19 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from googleapiclient.discovery import build
-from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import re
 from collections import Counter
 from youtube_comment_downloader import YoutubeCommentDownloader
 import gdown
 import os
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import shutil
+
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
+
 def download_model_files(language):
     """إعداد ملفات النموذج حسب اللغة"""
     lang_code = "ar" if language == "Arabic" else "en"
@@ -51,6 +51,7 @@ def download_model_files(language):
             gdown.download(model_files[lang_code]["url"], model_files[lang_code]["dest"], quiet=False)
         except Exception as e:
             st.error(f"خطأ في تحميل النموذج: {str(e)}")
+
 @st.cache_resource
 def load_model(language):
     """تحميل النموذج من المجلد المحلي"""
@@ -76,7 +77,7 @@ def load_model(language):
     except Exception as e:
         st.error(f"Model loading failed: {str(e)}")
         return None, None
-    
+
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
@@ -87,13 +88,15 @@ language = st.sidebar.radio(
 
 language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language) 
+
 if model is None or tokenizer is None:
     st.error("Failed to load model - please check the error messages above")
     st.stop()
+
 def predict_sentiment(text, language):
-    """تحليل المشاعر للنص"""
+    """تحليل المشاعر للنص - Fixed version"""
     if not text.strip():
-        return "غير محدد", 0.0, "⚪"
+        return "غير محدد" if language == "arabic" else "Unknown", 0.0, "⚪"
     
     try:
         # Tokenize input
@@ -106,7 +109,7 @@ def predict_sentiment(text, language):
             # Verify model output dimensions
             if logits.shape[1] != model.config.num_labels:
                 st.error(f"Model output dimension mismatch! Expected {model.config.num_labels} classes, got {logits.shape[1]}")
-                return "خطأ", 0.0, "⚪"
+                return "خطأ" if language == "arabic" else "Error", 0.0, "⚪"
             
             probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
             predicted_class = torch.argmax(logits, dim=1).item()
@@ -114,31 +117,61 @@ def predict_sentiment(text, language):
             # Ensure predicted class is valid
             if predicted_class >= model.config.num_labels:
                 st.error(f"Invalid class prediction: {predicted_class} (max is {model.config.num_labels-1})")
-                return "خطأ", 0.0, "⚪"
+                return "خطأ" if language == "arabic" else "Error", 0.0, "⚪"
             
             confidence = probabilities[predicted_class].item()
             
-            # Define labels and colors
-            if language == "arabic":
-                labels = ["سلبي", "إيجابي", "محايد"]
-                colors = ["🔴", "🟢", "🟡"]
-            else:
-                labels = ["Negative", "Positive", "Neutral"]
-                colors = ["🔴", "🟢", "🟡"]
-            
-            # Ensure we have enough labels
-            if predicted_class >= len(labels):
-                return "غير محدد", 0.0, "⚪"
+            # Use model's built-in labels if available
+            if hasattr(model.config, 'id2label') and model.config.id2label:
+                model_label = model.config.id2label[str(predicted_class)]
                 
-            return labels[predicted_class], confidence, colors[predicted_class]
+                # Map English model labels to desired language
+                if language == "arabic":
+                    label_mapping = {
+                        "Negative": "سلبي",
+                        "Positive": "إيجابي", 
+                        "Neutral": "محايد"
+                    }
+                    sentiment_label = label_mapping.get(model_label, model_label)
+                else:
+                    sentiment_label = model_label
+                
+                # Color mapping
+                color_mapping = {
+                    "Negative": "🔴", "سلبي": "🔴",
+                    "Positive": "🟢", "إيجابي": "🟢", 
+                    "Neutral": "🟡", "محايد": "🟡"
+                }
+                color = color_mapping.get(sentiment_label, "⚪")
+                
+            else:
+                # Fallback if no model labels available
+                if language == "arabic":
+                    labels = ["سلبي", "محايد", "إيجابي"]  # Reordered to match model: 0=Negative, 1=Neutral, 2=Positive
+                    colors = ["🔴", "🟡", "🟢"]
+                else:
+                    labels = ["Negative", "Neutral", "Positive"]  # Reordered to match model
+                    colors = ["🔴", "🟡", "🟢"]
+                
+                # Ensure we have enough labels
+                if predicted_class >= len(labels):
+                    return "غير محدد" if language == "arabic" else "Unknown", 0.0, "⚪"
+                    
+                sentiment_label = labels[predicted_class]
+                color = colors[predicted_class]
+            
+            return sentiment_label, confidence, color
             
     except Exception as e:
         st.error(f"Error in sentiment analysis: {str(e)}")
-        return "خطأ", 0.0, "⚪"
-    
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
+        return "خطأ" if language == "arabic" else "Error", 0.0, "⚪"
+
+# Display model info for debugging
 st.write(f"Model configuration: {model.config}")
 st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
-    
+
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
@@ -152,6 +185,7 @@ def extract_video_id(url):
     return None
 
 def get_comments_without_api(video_url, max_comments=100):
+    """Fetch comments without API"""
     video_id = extract_video_id(video_url)
     downloader = YoutubeCommentDownloader()
     comments = []
@@ -169,18 +203,8 @@ def get_comments_without_api(video_url, max_comments=100):
         st.error(f"Error during scraping: {str(e)}")
     return comments
 
-def get_youtube_comments(video_id, api_key=None, max_comments=100):
-    """Fetch video comments from YouTube"""
-    return get_comments_without_api(f"https://www.youtube.com/watch?v={video_id}", max_comments)
-
-
 def analyze_comments(comments, language_code="english"):
     """Analyze sentiment of comments with language support"""
-    if language_code == "arabic":
-        label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
-    else:
-        label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
-
     results = []
     for comment in comments:
         sentiment, confidence, emoji = predict_sentiment(comment['text'], language_code)
@@ -247,19 +271,9 @@ def create_visualizations(results, language):
     )
 
     return fig_pie, fig_bar, fig_confidence, df
-# App UI
-st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
-
 
 # Sidebar
 st.sidebar.header("⚙️ Settings")
-
-# API Key input
-# api_key = st.sidebar.text_input(
-#     "YouTube API Key:",
-#     type="password",
-#     help="You can obtain an API Key from Google Cloud Console"
-# )
 
 # Video URL input
 video_url = st.sidebar.text_input(
@@ -301,7 +315,7 @@ if analyze_button:
                 if not comments:
                     st.error("❌ No comments found or an error occurred")
                 else:
-                    results = analyze_comments(comments, language.lower())
+                    results = analyze_comments(comments, language_code)
                     fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language_code)
                     
                     st.success(f"✅ Successfully analyzed {len(results)} comments!")
@@ -310,25 +324,29 @@ if analyze_button:
                     col1, col2, col3, col4 = st.columns(4)
                     sentiment_counts = df['sentiment'].value_counts()
                     
+                    # Get labels based on language
+                    if language_code == "arabic":
+                        pos_label, neg_label, neu_label = "إيجابي", "سلبي", "محايد"
+                        pos_text, neg_text, neu_text, conf_text = "إيجابي", "سلبي", "محايد", "متوسط الثقة"
+                    else:
+                        pos_label, neg_label, neu_label = "Positive", "Negative", "Neutral"
+                        pos_text, neg_text, neu_text, conf_text = "Positive", "Negative", "Neutral", "Avg. Confidence"
+                    
                     with col1:
-                        positive = sentiment_counts.get('إيجابي' if language_code == "arabic" else 'Positive', 0)
-                        st.metric("Positive" if language == "English" else "إيجابي", 
-                                 f"{positive} ({positive/len(results):.1%})")
+                        positive = sentiment_counts.get(pos_label, 0)
+                        st.metric(pos_text, f"{positive} ({positive/len(results):.1%})")
                     
                     with col2:
-                        negative = sentiment_counts.get('سلبي' if language_code == "arabic" else 'Negative', 0)
-                        st.metric("Negative" if language == "English" else "سلبي", 
-                                 f"{negative} ({negative/len(results):.1%})")
+                        negative = sentiment_counts.get(neg_label, 0)
+                        st.metric(neg_text, f"{negative} ({negative/len(results):.1%})")
                     
                     with col3:
-                        neutral = sentiment_counts.get('محايد' if language_code == "arabic" else 'Neutral', 0)
-                        st.metric("Neutral" if language == "English" else "محايد", 
-                                 f"{neutral} ({neutral/len(results):.1%})")
+                        neutral = sentiment_counts.get(neu_label, 0)
+                        st.metric(neu_text, f"{neutral} ({neutral/len(results):.1%})")
                     
                     with col4:
                         avg_conf = df['confidence'].mean()
-                        st.metric("Avg. Confidence" if language == "English" else "متوسط الثقة", 
-                                 f"{avg_conf:.2%}")
+                        st.metric(conf_text, f"{avg_conf:.2%}")
                     
                     st.markdown("---")
                     
@@ -346,7 +364,7 @@ if analyze_button:
                     
                     # تصفية النتائج
                     filter_sentiment = st.selectbox(
-                        "Filter by sentiment:" if language == "English" else "تصفية حسب المشاعر",
+                        "Filter by sentiment:" if language == "English" else "تصفية حسب المشاعر:",
                         ["All"] + list(df['sentiment'].unique())
                     )
                     if filter_sentiment != "All":
@@ -383,4 +401,11 @@ else:
     - Detailed statistics
     - Filtering and CSV download
     - Single comment analysis
+    
+    ## 🚀 How to Use:
+    1. Select your preferred language (Arabic/English)
+    2. Enter a YouTube video URL in the sidebar
+    3. Choose the number of comments to analyze
+    4. Click "🔍 Analyze Comments"
+    5. View results and download CSV if needed
     """)
