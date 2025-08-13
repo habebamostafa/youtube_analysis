@@ -54,10 +54,6 @@ def has_emoji(text):
         "]+", flags=re.UNICODE)
     return bool(emoji_pattern.search(text))
 
-keep_words = {'لا', 'لم', 'لن', 'ما', 'مش', 'ليس', 'بدون', 'غير', 'إن', 'إذ', 'إذا'}
-custom_stopwords = arabic_stopwords - keep_words
-
-
 def normalize_arabic(text):
     if has_emoji(text):
         text = convert_emojis(text)
