@@ -439,22 +439,21 @@ single_comment = st.sidebar.text_area("Enter a comment to analyze:")
 
 if st.sidebar.button("Analyze Comment"):
     if single_comment:
-        if debug_mode:
-            st.sidebar.write("🔍 **Debug Info:**")
-            # Show token analysis
-            try:
-                inputs = tokenizer(single_comment, return_tensors="pt", truncation=True, padding=True, max_length=512)
-                input_ids = inputs['input_ids'][0]
-                model_vocab_size = model.config.vocab_size
-                
-                oov_tokens = (input_ids >= model_vocab_size).sum().item()
-                st.sidebar.write(f"Total tokens: {len(input_ids)}")
-                st.sidebar.write(f"OOV tokens: {oov_tokens}")
-                st.sidebar.write(f"Max token ID: {input_ids.max().item()}")
-                st.sidebar.write(f"Model vocab limit: {model_vocab_size}")
-            except Exception as e:
-                st.sidebar.write(f"Debug error: {e}")
-        
+        st.sidebar.write("🔍 **Debug Info:**")
+        # Show token analysis
+        try:
+            inputs = tokenizer(single_comment, return_tensors="pt", truncation=True, padding=True, max_length=512)
+            input_ids = inputs['input_ids'][0]
+            model_vocab_size = model.config.vocab_size
+            
+            oov_tokens = (input_ids >= model_vocab_size).sum().item()
+            st.sidebar.write(f"Total tokens: {len(input_ids)}")
+            st.sidebar.write(f"OOV tokens: {oov_tokens}")
+            st.sidebar.write(f"Max token ID: {input_ids.max().item()}")
+            st.sidebar.write(f"Model vocab limit: {model_vocab_size}")
+        except Exception as e:
+            st.sidebar.write(f"Debug error: {e}")
+    
         sentiment, confidence, emoji = predict_sentiment(single_comment, language_code)
         st.sidebar.markdown(f"**Result:** {emoji} {sentiment}")
         st.sidebar.markdown(f"**Confidence:** {confidence:.2%}")
