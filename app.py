@@ -70,7 +70,15 @@ def load_model(language):
             st.write("Class labels:", model.config.id2label)
         else:
             st.warning("No class label mapping found in model config")
-        
+        test_text = "أحب هذا الفيديو" if language == "Arabic" else "I love this video"
+        inputs = tokenizer(test_text, return_tensors="pt")
+        with torch.no_grad():
+            outputs = model(**inputs)
+            pred = torch.argmax(outputs.logits).item()
+            if pred not in [0, 1, 2]:
+                st.error(f"Test prediction failed: got class {pred} (expected 0-2)")
+                return None, None
+            
         model.eval()
         return model, tokenizer
     except Exception as e:
@@ -91,57 +99,58 @@ if model is None or tokenizer is None:
     st.error("Failed to load model - please check the error messages above")
     st.stop()
 def predict_sentiment(text, language):
+    """Analyze sentiment of text"""
     if not text.strip():
         return "غير محدد", 0.0, "⚪"
 
     try:
+        # Tokenize input
         inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-
+        
         with torch.no_grad():
             outputs = model(**inputs)
             logits = outputs.logits
-
+            
+            # Verify model output dimensions
             if logits.shape[1] != model.config.num_labels:
-                st.error(f"Mismatch: model expects {model.config.num_labels} labels but got {logits.shape[1]}")
+                st.error(f"Model expects {model.config.num_labels} classes but got {logits.shape[1]}")
                 return "خطأ", 0.0, "⚪"
-
+            
+            # Get probabilities and predicted class
             probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
             predicted_class = torch.argmax(probabilities).item()
-
-            if predicted_class >= model.config.num_labels:
-                st.error(f"Predicted class {predicted_class} is out of range")
-                return "خطأ", 0.0, "⚪"
-
             confidence = probabilities[predicted_class].item()
-    
-            # تحضير labels و colors بناءً على الموديل نفسه
-            id2label = model.config.id2label
-            if isinstance(list(id2label.keys())[0], int):
-                label = id2label[predicted_class]
-            else:
-                label = id2label[str(predicted_class)]
-
-            # ترجمة لو اللغة عربية
+            
+            # Ensure predicted class is valid
+            if predicted_class not in [0, 1, 2]:
+                st.error(f"Invalid prediction: {predicted_class} (should be 0-2)")
+                return "خطأ", 0.0, "⚪"
+            
+            # Get label from model config
+            label = model.config.id2label[str(predicted_class)]
+            
+            # Translate to Arabic if needed
             if language.lower() == "arabic":
                 label_map = {
                     "Negative": "سلبي",
-                    "Positive": "إيجابي",
-                    "Neutral": "محايد"
+                    "Neutral": "محايد",
+                    "Positive": "إيجابي"
                 }
                 label = label_map.get(label, label)
-
-            color_map = {
+            
+            # Get emoji
+            emoji_map = {
                 "Negative": "🔴",
                 "سلبي": "🔴",
-                "Positive": "🟢",
-                "إيجابي": "🟢",
                 "Neutral": "🟡",
-                "محايد": "🟡"
+                "محايد": "🟡",
+                "Positive": "🟢",
+                "إيجابي": "🟢"
             }
-            color = color_map.get(label, "⚪")
-
-            return label, confidence, color
-
+            emoji = emoji_map.get(label, "⚪")
+            
+            return label, confidence, emoji
+            
     except Exception as e:
         st.error(f"Error in sentiment analysis: {str(e)}")
         return "خطأ", 0.0, "⚪"
@@ -185,20 +194,67 @@ def get_youtube_comments(video_id, api_key=None, max_comments=100):
 
 
 def analyze_comments(comments, language_code="english"):
-    """Analyze sentiment of comments with language support"""
+    """Analyze sentiment of comments in batches"""
     results = []
-    for comment in comments:
-        # Pass the full language name ("Arabic"/"English") not the code
-        language = "Arabic" if language_code == "arabic" else "English"
-        sentiment, confidence, emoji = predict_sentiment(comment['text'], language)
-        results.append({
-            'comment': comment['text'][:100] + "..." if len(comment['text']) > 100 else comment['text'],
-            'author': comment['author'],
-            'sentiment': sentiment,
-            'confidence': confidence,
-            'emoji': emoji,
-            'likes': comment['likes']
-        })
+    batch_size = 8
+    language = "Arabic" if language_code == "arabic" else "English"
+    
+    for i in range(0, len(comments), batch_size):
+        batch = comments[i:i+batch_size]
+        texts = [clean_text(c['text']) for c in batch]
+        
+        try:
+            inputs = tokenizer(texts, return_tensors="pt", truncation=True, padding=True, max_length=512)
+            
+            with torch.no_grad():
+                outputs = model(**inputs)
+                logits = outputs.logits
+                probabilities = torch.nn.functional.softmax(logits, dim=1)
+                pred_classes = torch.argmax(probabilities, dim=1)
+                confidences = probabilities[torch.arange(len(pred_classes)), pred_classes]
+                
+                for j, (text, pred, conf) in enumerate(zip(texts, pred_classes, confidences)):
+                    pred = pred.item()
+                    conf = conf.item()
+                    
+                    if pred not in [0, 1, 2]:
+                        results.append({
+                            'comment': text[:100] + "..." if len(text) > 100 else text,
+                            'author': batch[j]['author'],
+                            'sentiment': "خطأ",
+                            'confidence': 0.0,
+                            'emoji': "⚪",
+                            'likes': batch[j]['likes']
+                        })
+                        continue
+                        
+                    label = model.config.id2label[str(pred)]
+                    if language == "Arabic":
+                        label = {"Negative": "سلبي", "Neutral": "محايد", "Positive": "إيجابي"}.get(label, label)
+                    
+                    emoji = {"Negative": "🔴", "Neutral": "🟡", "Positive": "🟢"}.get(label, "⚪")
+                    
+                    results.append({
+                        'comment': text[:100] + "..." if len(text) > 100 else text,
+                        'author': batch[j]['author'],
+                        'sentiment': label,
+                        'confidence': conf,
+                        'emoji': emoji,
+                        'likes': batch[j]['likes']
+                    })
+                    
+        except Exception as e:
+            st.error(f"Error processing batch {i//batch_size}: {str(e)}")
+            for j in range(len(batch)):
+                results.append({
+                    'comment': batch[j]['text'][:100] + "..." if len(batch[j]['text']) > 100 else batch[j]['text'],
+                    'author': batch[j]['author'],
+                    'sentiment': "خطأ",
+                    'confidence': 0.0,
+                    'emoji': "⚪",
+                    'likes': batch[j]['likes']
+                })
+    
     return results
 
 def create_visualizations(results, language):
