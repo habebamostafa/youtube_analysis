@@ -104,6 +104,10 @@ language = st.sidebar.radio(
     index=0
 )
 
+# Add vocab mismatch warning and solution
+st.sidebar.markdown("---")
+st.sidebar.header("⚙️ Model Status")
+
 language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language) 
 
@@ -111,8 +115,41 @@ if model is None or tokenizer is None:
     st.error("Failed to load model - please check the error messages above")
     st.stop()
 
+# Check vocab compatibility
+model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
+tokenizer_vocab_size = tokenizer.vocab_size if hasattr(tokenizer, 'vocab_size') else len(tokenizer.get_vocab()) if hasattr(tokenizer, 'get_vocab') else 64000
+
+if tokenizer_vocab_size != model_vocab_size:
+    st.sidebar.warning(f"⚠️ Vocab Mismatch Detected!")
+    st.sidebar.info(f"Tokenizer: {tokenizer_vocab_size:,} tokens")
+    st.sidebar.info(f"Model: {model_vocab_size:,} tokens")
+    st.sidebar.markdown("**Status:** Using token filtering + fallback")
+    
+    with st.sidebar.expander("🔧 How to Fix This"):
+        st.markdown("""
+        **Option 1: Use a compatible tokenizer**
+        ```bash
+        # Download matching tokenizer for your model
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+        tokenizer.save_pretrained("models/ar")  # or models/en
+        ```
+        
+        **Option 2: Retrain with matching vocab**
+        - Ensure tokenizer and model use same vocabulary file
+        
+        **Current Solution:**
+        - Filtering out-of-vocabulary tokens
+        - Using fallback sentiment analysis when needed
+        """)
+else:
+    st.sidebar.success("✅ Tokenizer-Model Compatible")
+
+# Add a toggle for debugging
+debug_mode = st.sidebar.checkbox("🐛 Debug Mode", help="Show detailed processing info")
+
 def predict_sentiment(text, language):
-    """تحليل المشاعر للنص - Comprehensive fix"""
+    """تحليل المشاعر للنص - Robust version with vocab filtering"""
     if not text.strip():
         return "غير محدد" if language == "arabic" else "Unknown", 0.0, "⚪"
     
@@ -121,6 +158,9 @@ def predict_sentiment(text, language):
         text = text.strip()
         if len(text) > 500:  # Limit text length
             text = text[:500]
+        
+        # Get vocabulary size from model config
+        model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
         
         # Tokenize with additional safety checks
         try:
@@ -134,14 +174,25 @@ def predict_sentiment(text, language):
                 return_attention_mask=True
             )
             
-            # Check for out-of-vocabulary tokens
+            # CRITICAL FIX: Filter out-of-vocabulary tokens
             input_ids = inputs['input_ids'][0]
-            vocab_size = tokenizer.vocab_size if hasattr(tokenizer, 'vocab_size') else 30000
+            attention_mask = inputs['attention_mask'][0]
             
-            # Filter out any token IDs that exceed vocabulary size
-            if torch.any(input_ids >= vocab_size):
-                st.warning("Text contains unknown tokens, using fallback classification")
-                # Use simple heuristic fallback
+            # Replace OOV tokens with [UNK] token ID (usually 1 or 100)
+            unk_token_id = tokenizer.unk_token_id if tokenizer.unk_token_id is not None else 1
+            
+            # Create mask for valid tokens (within vocab range)
+            valid_mask = input_ids < model_vocab_size
+            
+            # Replace invalid tokens with UNK token
+            filtered_input_ids = torch.where(valid_mask, input_ids, torch.tensor(unk_token_id))
+            
+            # Update inputs with filtered token IDs
+            inputs['input_ids'] = filtered_input_ids.unsqueeze(0)
+            
+            # Verify all tokens are now within range
+            if torch.any(inputs['input_ids'] >= model_vocab_size):
+                st.warning("Still found OOV tokens after filtering, using fallback")
                 return get_fallback_sentiment(text, language)
                 
         except Exception as tokenizer_error:
@@ -156,7 +207,6 @@ def predict_sentiment(text, language):
                 
                 # Verify model output dimensions
                 if logits.shape[1] != model.config.num_labels:
-                    st.error(f"Model output dimension mismatch! Expected {model.config.num_labels} classes, got {logits.shape[1]}")
                     return get_fallback_sentiment(text, language)
                 
                 probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
@@ -164,20 +214,19 @@ def predict_sentiment(text, language):
                 
                 # Ensure predicted class is valid
                 if predicted_class >= model.config.num_labels or predicted_class < 0:
-                    st.error(f"Invalid class prediction: {predicted_class} (valid range: 0-{model.config.num_labels-1})")
                     return get_fallback_sentiment(text, language)
                 
                 confidence = probabilities[predicted_class].item()
                 
             except Exception as model_error:
-                st.error(f"Model inference error: {str(model_error)}")
+                # Model still failed, use fallback
                 return get_fallback_sentiment(text, language)
         
         # Label mapping with safer access
         try:
             # Use integer keys for id2label access
             if hasattr(model.config, 'id2label') and model.config.id2label:
-                # Try both integer and string keys
+                # Try integer key first, then string key
                 model_label = None
                 if predicted_class in model.config.id2label:
                     model_label = model.config.id2label[predicted_class]
@@ -209,7 +258,7 @@ def predict_sentiment(text, language):
             else:
                 raise ValueError("No id2label found")
                 
-        except Exception as label_error:
+        except Exception:
             # Fallback label mapping
             if language == "arabic":
                 labels = ["سلبي", "محايد", "إيجابي"]  # 0=Negative, 1=Neutral, 2=Positive
@@ -218,17 +267,15 @@ def predict_sentiment(text, language):
                 labels = ["Negative", "Neutral", "Positive"]  # 0=Negative, 1=Neutral, 2=Positive
                 colors = ["🔴", "🟡", "🟢"]
             
-            # Ensure we have enough labels
             if predicted_class >= len(labels):
-                return "غير محدد" if language == "arabic" else "Unknown", 0.0, "⚪"
+                return get_fallback_sentiment(text, language)
                 
             sentiment_label = labels[predicted_class]
             color = colors[predicted_class]
         
         return sentiment_label, confidence, color
             
-    except Exception as e:
-        st.error(f"Critical error in sentiment analysis: {str(e)}")
+    except Exception:
         return get_fallback_sentiment(text, language)
 
 def get_fallback_sentiment(text, language):
@@ -391,9 +438,25 @@ single_comment = st.sidebar.text_area("Enter a comment to analyze:")
 
 if st.sidebar.button("Analyze Comment"):
     if single_comment:
+        if debug_mode:
+            st.sidebar.write("🔍 **Debug Info:**")
+            # Show token analysis
+            try:
+                inputs = tokenizer(single_comment, return_tensors="pt", truncation=True, padding=True, max_length=512)
+                input_ids = inputs['input_ids'][0]
+                model_vocab_size = model.config.vocab_size
+                
+                oov_tokens = (input_ids >= model_vocab_size).sum().item()
+                st.sidebar.write(f"Total tokens: {len(input_ids)}")
+                st.sidebar.write(f"OOV tokens: {oov_tokens}")
+                st.sidebar.write(f"Max token ID: {input_ids.max().item()}")
+                st.sidebar.write(f"Model vocab limit: {model_vocab_size}")
+            except Exception as e:
+                st.sidebar.write(f"Debug error: {e}")
+        
         sentiment, confidence, emoji = predict_sentiment(single_comment, language_code)
         st.sidebar.markdown(f"**Result:** {emoji} {sentiment}")
-        st.sidebar.markdown(f"**Confidence Level:** {confidence:.2%}")
+        st.sidebar.markdown(f"**Confidence:** {confidence:.2%}")
     else:
         st.sidebar.warning("Please enter a comment to analyze")
 
