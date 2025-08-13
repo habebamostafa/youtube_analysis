@@ -109,7 +109,7 @@ def predict_sentiment(text, language):
                 return "خطأ", 0.0, "⚪"
             
             probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-            predicted_class = torch.argmax(probabilities).item()
+            predicted_class = torch.argmax(logits, dim=1).item()
             
             # Ensure predicted class is valid
             if predicted_class >= model.config.num_labels:
