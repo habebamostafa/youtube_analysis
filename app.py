@@ -93,72 +93,58 @@ model, tokenizer = load_model(language)
 if model is None or tokenizer is None:
     st.error("Failed to load model - please check the error messages above")
     st.stop()
-def predict_sentiment(text, language):
-    """تحليل المشاعر للنص"""
-    if not text.strip():
-        return "غير محدد", 0.0, "⚪"
+def predict_sentiment(model, tokenizer, text):
+    # تجهيز النص
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
+
+    # تشغيل الموديل
+    outputs = model(**inputs)
+    logits = outputs.logits
+    predicted_class_id = logits.argmax(dim=-1).item()
+
+    # جلب ترتيب الفئات من الموديل
+    if hasattr(model.config, "id2label") and model.config.id2label:
+        labels = [model.config.id2label[i] for i in range(len(model.config.id2label))]
+    else:
+        labels = [str(i) for i in range(logits.shape[-1])]  # fallback
+
+    # التأكد من أن الـ predicted_class_id صالح
+    if 0 <= predicted_class_id < len(labels):
+        predicted_label = labels[predicted_class_id]
+    else:
+        predicted_label = "Unknown"
+
+    return predicted_label
+
+
+
+
+# def test_model_functionality():
+#     """Test the model with sample inputs"""
+#     test_cases = {
+#         "Arabic": [
+#             ("أحب هذا الفيديو كثيراً", "إيجابي"),
+#             ("لم يعجبني المحتوى", "سلبي"), 
+#             ("هذا تعليق عادي", "محايد")
+#         ],
+#         "English": [
+#             ("I love this video", "Positive"),
+#             ("I didn't like the content", "Negative"),
+#             ("This is a neutral comment", "Neutral")
+#         ]
+#     }
     
-    try:
-        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-        
-        with torch.no_grad():
-            outputs = model(**inputs)
-            logits = outputs.logits
+#     for lang, cases in test_cases.items():
+#         st.subheader(f"Testing {lang} Model")
+#         m, t = load_model(lang)
+#         if m is None:
+#             continue
             
-            # Get probabilities and predicted class
-            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-            predicted_class = torch.argmax(probabilities).item()
-            confidence = probabilities[predicted_class].item()
-            
-            # Define labels based on model's num_labels
-            num_labels = model.config.num_labels
-            
-            if num_labels == 3:
-                labels = ["سلبي", "إيجابي", "محايد"] if language == "Arabic" else ["Negative", "Positive", "Neutral"]
-                colors = ["🔴", "🟢", "🟡"]
-            else:
-                st.error(f"Unexpected number of labels: {num_labels}")
-                return "خطأ", 0.0, "⚪"
-            
-            # Safety check
-            if predicted_class >= len(labels):
-                st.error(f"Predicted class {predicted_class} out of range for {len(labels)} labels")
-                return "خطأ", 0.0, "⚪"
-                
-            return labels[predicted_class], confidence, colors[predicted_class]
-            
-    except Exception as e:
-        st.error(f"Prediction error: {str(e)}")
-        return "خطأ", 0.0, "⚪"
-
-
-
-def test_model_functionality():
-    """Test the model with sample inputs"""
-    test_cases = {
-        "Arabic": [
-            ("أحب هذا الفيديو كثيراً", "إيجابي"),
-            ("لم يعجبني المحتوى", "سلبي"), 
-            ("هذا تعليق عادي", "محايد")
-        ],
-        "English": [
-            ("I love this video", "Positive"),
-            ("I didn't like the content", "Negative"),
-            ("This is a neutral comment", "Neutral")
-        ]
-    }
-    
-    for lang, cases in test_cases.items():
-        st.subheader(f"Testing {lang} Model")
-        m, t = load_model(lang)
-        if m is None:
-            continue
-            
-        for text, expected in cases:
-            sentiment, conf, emoji = predict_sentiment(text, lang)
-            st.write(f"Input: '{text}'")
-            st.write(f"Expected: {expected} | Got: {sentiment} {emoji} ({conf:.2f})")
-            st.write("---")
+#         for text, expected in cases:
+#             sentiment, conf, emoji = predict_sentiment(text, lang)
+#             st.write(f"Input: '{text}'")
+#             st.write(f"Expected: {expected} | Got: {sentiment} {emoji} ({conf:.2f})")
+#             st.write("---")
 # DEBUG = True
 
 # if DEBUG:
