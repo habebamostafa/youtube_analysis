@@ -113,6 +113,10 @@ def predict_sentiment(text, language):
                 return "خطأ", 0.0, "⚪"
 
             confidence = probabilities[predicted_class].item()
+            predicted_label = int(outputs.logits.argmax(dim=1).item())
+            if predicted_label not in label_map:
+                print(f"⚠ Label {predicted_label} not found in label_map")
+                predicted_label = 0  # أو أي default
 
             # تحضير labels و colors بناءً على الموديل نفسه
             id2label = model.config.id2label
