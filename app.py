@@ -120,8 +120,6 @@ language = st.sidebar.radio(
     index=0
 )
 
-# تحميل النموذج المناسب
-# تحميل النموذج المناسب
 language_code = "arabic" if language == "Arabic" else "english"
 model, tokenizer = load_model(language)  # هنا يجب تمرير language وليس language_code
 if model is None or tokenizer is None:
@@ -129,46 +127,22 @@ if model is None or tokenizer is None:
     st.stop()
 def predict_sentiment(text, language):
     """تحليل المشاعر للنص"""
-    if not text.strip():
-        return "غير محدد", 0.0, "⚪"
-    
-    try:
-        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-        with torch.no_grad():
-            outputs = model(**inputs)
-            logits = outputs.logits
-            
-            # Get probabilities using softmax
-            probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-            
-            # Get the predicted class with highest probability
-            predicted_class = torch.argmax(probabilities).item()
-            
-            # Verify the predicted class is within valid range
-            num_labels = model.config.num_labels
-            if predicted_class >= num_labels:
-                st.error(f"Invalid class index {predicted_class} for model with {num_labels} labels")
-                predicted_class = num_labels - 1  # Fallback to last class
-            
-            confidence = probabilities[predicted_class].item()
-            
-            # Define labels and colors based on language
-            if language == "arabic":
-                labels = ["سلبي", "إيجابي", "محايد"]
-                colors = ["🔴", "🟢", "🟡"]
-            else:
-                labels = ["Negative", "Positive", "Neutral"]
-                colors = ["🔴", "🟢", "🟡"]
-            
-            # Ensure we have enough labels
-            if predicted_class >= len(labels):
-                return "غير محدد", 0.0, "⚪"
-                
-            return labels[predicted_class], confidence, colors[predicted_class]
-            
-    except Exception as e:
-        st.error(f"خطأ في تحليل المشاعر: {str(e)}")
-        return "خطأ", 0.0, "⚪"
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits
+        predicted_class = torch.argmax(logits, dim=1).item()
+        probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+        confidence = probabilities[predicted_class].item()
+
+        if language == "arabic":
+            label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
+            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+        else:
+            label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
+            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+
+        return label_map[predicted_class], confidence, colors[predicted_class]
     
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
