@@ -16,12 +16,10 @@ st.title("🎥 YouTube Comments Sentiment Analysis")
 st.markdown("---")
 
 def download_model_files(language):
-    """إعداد ملفات النموذج حسب اللغة"""
     lang_code = "ar" if language == "Arabic" else "en"
     model_dir = f"models/{lang_code}"
     os.makedirs(model_dir, exist_ok=True)
     
-    # نسخ ملفات التكوين
     config_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
     for filename in config_files:
@@ -32,9 +30,8 @@ def download_model_files(language):
             try:
                 shutil.copyfile(src_path, dst_path)
             except Exception as e:
-                st.error(f"خطأ في نسخ {filename}: {str(e)}")
+                st.error(f"  error {filename}: {str(e)}")
 
-    # تحميل ملف النموذج
     model_files = {
         "ar": {
             "url": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
@@ -50,11 +47,10 @@ def download_model_files(language):
         try:
             gdown.download(model_files[lang_code]["url"], model_files[lang_code]["dest"], quiet=False)
         except Exception as e:
-            st.error(f"خطأ في تحميل النموذج: {str(e)}")
+            st.error(f"error: {str(e)}")
 
 @st.cache_resource
 def load_model(language):
-    """تحميل النموذج من المجلد المحلي"""
     lang_code = "ar" if language == "Arabic" else "en"
     model_path = f"models/{lang_code}"
     
@@ -102,7 +98,6 @@ def load_model(language):
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None
 
-# إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
     "Select Comment Language:",
@@ -155,9 +150,8 @@ tokenizer_vocab_size = tokenizer.vocab_size if hasattr(tokenizer, 'vocab_size') 
 # debug_mode = st.sidebar.checkbox("🐛 Debug Mode", help="Show detailed processing info")
 
 def predict_sentiment(text, language):
-    """تحليل المشاعر للنص - Robust version with vocab filtering"""
     if not text.strip():
-        return "غير محدد" if language == "arabic" else "Unknown", 0.0, "⚪"
+        return " not defined" if language == "arabic" else "Unknown", 0.0, "⚪"
     
     try:
         # Clean and preprocess text
@@ -332,7 +326,6 @@ def get_fallback_sentiment(text, language):
 #     st.error("❌ Model or tokenizer not loaded properly!")
 
 def extract_video_id(url):
-    """استخراج معرف الفيديو من الرابط"""
     patterns = [
         r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})',
         r'youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})'
@@ -524,7 +517,6 @@ if analyze_button:
                     
                     st.markdown("---")
                     
-                    # عرض الرسوم البيانية
                     col1, col2 = st.columns(2)
                     with col1:
                         st.plotly_chart(fig_pie, use_container_width=True)
@@ -536,7 +528,6 @@ if analyze_button:
                     st.markdown("---")
                     st.subheader("📋 Comments Details")
                     
-                    # تصفية النتائج
                     filter_sentiment = st.selectbox(
                         "Filter by sentiment:" if language == "English" else "تصفية حسب المشاعر:",
                         ["All"] + list(df['sentiment'].unique())
@@ -546,7 +537,6 @@ if analyze_button:
                     else:
                         filtered_df = df
                     
-                    # عرض الجدول
                     display_cols = ['author', 'comment', 'sentiment', 'confidence', 'likes']
                     display_df = filtered_df[display_cols].copy()
                     display_df.columns = ['Author', 'Comment', 'Sentiment', 'Confidence', 'Likes']
@@ -558,7 +548,6 @@ if analyze_button:
                         hide_index=True
                     )
                     
-                    # زر التنزيل
                     csv = df.to_csv(index=False, encoding='utf-8-sig')
                     st.download_button(
                         label="📥 Download Results (CSV)",
