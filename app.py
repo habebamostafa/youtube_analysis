@@ -99,72 +99,45 @@ def predict_sentiment(text, language):
         return "غير محدد", 0.0, "⚪"
     
     try:
+        # Tokenize input
         inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
         
         with torch.no_grad():
+            # Get model outputs
             outputs = model(**inputs)
             logits = outputs.logits
             
-            # Get probabilities and predicted class
+            # Apply softmax to get probabilities
             probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
+            
+            # Get predicted class
             predicted_class = torch.argmax(probabilities).item()
             confidence = probabilities[predicted_class].item()
             
-            # Define labels based on model's num_labels
-            num_labels = model.config.num_labels
+            # Verify we have valid class indices
+            num_classes = model.config.num_labels
+            if predicted_class >= num_classes:
+                st.error(f"Model predicted invalid class {predicted_class} (max is {num_classes-1})")
+                return "خطأ", 0.0, "⚪"
             
-            if num_labels == 3:
-                labels = ["سلبي", "إيجابي", "محايد"] if language == "Arabic" else ["Negative", "Positive", "Neutral"]
-                colors = ["🔴", "🟢", "🟡"]
+            # Define labels based on language
+            if language_code == "arabic":
+                labels = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
             else:
-                st.error(f"Unexpected number of labels: {num_labels}")
-                return "خطأ", 0.0, "⚪"
+                labels= {0: "Negative", 1: "Positive", 2: "Neutral"}
+            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
+
             
-            # Safety check
+            # Ensure we have enough labels
             if predicted_class >= len(labels):
-                st.error(f"Predicted class {predicted_class} out of range for {len(labels)} labels")
-                return "خطأ", 0.0, "⚪"
+                return "غير محدد", 0.0, "⚪"
                 
             return labels[predicted_class], confidence, colors[predicted_class]
             
     except Exception as e:
-        st.error(f"Prediction error: {str(e)}")
+        st.error(f"Error in sentiment analysis: {str(e)}")
         return "خطأ", 0.0, "⚪"
-
-
-
-def test_model_functionality():
-    """Test the model with sample inputs"""
-    test_cases = {
-        "Arabic": [
-            ("أحب هذا الفيديو كثيراً", "إيجابي"),
-            ("لم يعجبني المحتوى", "سلبي"), 
-            ("هذا تعليق عادي", "محايد")
-        ],
-        "English": [
-            ("I love this video", "Positive"),
-            ("I didn't like the content", "Negative"),
-            ("This is a neutral comment", "Neutral")
-        ]
-    }
     
-    for lang, cases in test_cases.items():
-        st.subheader(f"Testing {lang} Model")
-        m, t = load_model(lang)
-        if m is None:
-            continue
-            
-        for text, expected in cases:
-            sentiment, conf, emoji = predict_sentiment(text, lang)
-            st.write(f"Input: '{text}'")
-            st.write(f"Expected: {expected} | Got: {sentiment} {emoji} ({conf:.2f})")
-            st.write("---")
-DEBUG = True
-
-if DEBUG:
-    test_model_functionality()
-    st.stop()
-
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
