@@ -11,15 +11,10 @@ import gdown
 import os
 import shutil
 import nltk
-nltk_data_dir = os.path.expanduser('~/nltk_data')
 
-if os.path.exists(nltk_data_dir):
-    shutil.rmtree(nltk_data_dir)
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-nltk.download('stopwords')
-nltk.download('punkt_tab')
-ARABIC_STOPWORDS = set(stopwords.words("arabic"))
+
 import emoji
 
 def convert_emojis(text):
@@ -58,14 +53,11 @@ def has_emoji(text):
         u"\U00010000-\U0010ffff"
         "]+", flags=re.UNICODE)
     return bool(emoji_pattern.search(text))
-arabic_stopwords = set(stopwords.words("arabic"))
 
 keep_words = {'لا', 'لم', 'لن', 'ما', 'مش', 'ليس', 'بدون', 'غير', 'إن', 'إذ', 'إذا'}
 custom_stopwords = arabic_stopwords - keep_words
 
-def remove_custom_stopwords(tokens):
-    """إزالة الكلمات التوقفية المخصصة"""
-    return [word for word in tokens if word not in custom_stopwords]
+
 def normalize_arabic(text):
     if has_emoji(text):
         text = convert_emojis(text)
@@ -84,14 +76,7 @@ def normalize_arabic(text):
     text = re.sub(r'[a-zA-Z]', '', text) # Remove English
     text = re.sub(r'[^\u0621-\u064A]', ' ', text) # Keep Arabic only
     text = re.sub(r'[\u061F\u060C\u061B]', '', text)
-
-    tokens = word_tokenize(text)
-
-    # إزالة ستوب وورد NLTK و الستوب وورد المخصصة مع بعض
-    tokens = [word for word in tokens if word not in ARABIC_STOPWORDS]
-    tokens = remove_custom_stopwords(tokens)
-
-    return ' '.join(tokens)
+    return ' '.join(text)
 
 st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
 st.title("🎥 YouTube Comments Sentiment Analysis")
