@@ -59,6 +59,11 @@ def load_model(language):
     model_path = f"models/{lang_code}"
     
     try:
+        required_files = ["config.json", "vocab.txt", "model.safetensors"]
+        for file in required_files:
+            if not os.path.exists(os.path.join(model_path, file)):
+                st.error(f"❌ Missing required file: {file}")
+                return None, None
         # Load tokenizer and model with error handling
         tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
         model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
