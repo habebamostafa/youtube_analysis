@@ -292,11 +292,8 @@ single_comment = st.sidebar.text_area("Enter a comment to analyze:")
 
 if st.sidebar.button("Analyze Comment"):
     if single_comment:
-        sentiment_id, confidence, emoji = predict_sentiment(single_comment, language_code)
-        label_map_ar = {0: "Negative", 1: "Positive", 2: "Neutral"}
-        colors = {0: "🔴", 1: "🟢", 2: "🟡"}
-
-        st.sidebar.markdown(f"**Result:** {colors[sentiment_id]} {label_map_ar[sentiment_id]}")
+        sentiment, confidence, emoji = predict_sentiment(single_comment, language_code)
+        st.sidebar.markdown(f"**Result:** {emoji} {sentiment}")
         st.sidebar.markdown(f"**Confidence Level:** {confidence:.2%}")
     else:
         st.sidebar.warning("Please enter a comment to analyze")
