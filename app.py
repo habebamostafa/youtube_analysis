@@ -72,6 +72,7 @@ def load_model(language):
             st.warning("No class label mapping found in model config")
         
         model.eval()
+        
         return model, tokenizer
     except Exception as e:
         st.error(f"Model loading failed: {str(e)}")
