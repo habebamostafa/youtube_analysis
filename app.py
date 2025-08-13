@@ -97,6 +97,8 @@ def load_model(language):
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return None, None
+download_model_files("English")
+download_model_files("Arabic")
 
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
