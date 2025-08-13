@@ -57,42 +57,29 @@ def load_model(language):
     lang_code = "ar" if language == "Arabic" else "en"
     model_path = f"models/{lang_code}"
     
-    # التأكد من وجود جميع الملفات المطلوبة
-    required_files = [
-        "config.json",
-        "vocab.txt",
-        "special_tokens_map.json",
-        "tokenizer_config.json",
-        "model.safetensors"
-    ]
-    
-    # تحميل الملفات الناقصة
+    # Verify all files exist
+    required_files = ["config.json", "model.safetensors", "vocab.txt"]
     missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
-    if missing_files:
-        st.warning(f"جاري تحميل الملفات الناقصة: {', '.join(missing_files)}")
-        download_model_files(language)
     
-    # التحقق مرة أخرى بعد التحميل
-    missing_files = [f for f in required_files if not os.path.exists(os.path.join(model_path, f))]
     if missing_files:
-        st.error(f"لا تزال الملفات الناقصة: {', '.join(missing_files)}")
+        st.error(f"Missing files: {', '.join(missing_files)}")
         return None, None
     
     try:
-        # استخدم AutoModel بدلاً من BertModel المحدد
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
-        model = AutoModelForSequenceClassification.from_pretrained(model_path)
+        # Force local files only
+        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
         
-        # التحقق من عدد الفئات
-        if model.config.num_labels != 3:
-            st.error(f"النموذج يحتوي على {model.config.num_labels} فئات بدلاً من 3")
-            return None, None
-            
+        # Debug output
+        st.write(f"Model loaded with {model.config.num_labels} classes")
+        st.write(f"Model class: {model.__class__.__name__}")
+        
         model.eval()
         return model, tokenizer
     except Exception as e:
-        st.error(f"خطأ في تحميل النموذج: {str(e)}")
+        st.error(f"Model loading failed: {str(e)}")
         return None, None
+    
 # إعدادات اللغة في الشريط الجانبي
 st.sidebar.header("🌍 Language Settings")
 language = st.sidebar.radio(
@@ -112,45 +99,72 @@ def predict_sentiment(text, language):
         return "غير محدد", 0.0, "⚪"
     
     try:
-        # Tokenize input
         inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
         
         with torch.no_grad():
-            # Get model outputs
             outputs = model(**inputs)
             logits = outputs.logits
             
-            # Apply softmax to get probabilities
+            # Get probabilities and predicted class
             probabilities = torch.nn.functional.softmax(logits, dim=1)[0]
-            
-            # Get predicted class
             predicted_class = torch.argmax(probabilities).item()
             confidence = probabilities[predicted_class].item()
             
-            # Verify we have valid class indices
-            num_classes = model.config.num_labels
-            if predicted_class >= num_classes:
-                st.error(f"Model predicted invalid class {predicted_class} (max is {num_classes-1})")
+            # Define labels based on model's num_labels
+            num_labels = model.config.num_labels
+            
+            if num_labels == 3:
+                labels = ["سلبي", "إيجابي", "محايد"] if language == "Arabic" else ["Negative", "Positive", "Neutral"]
+                colors = ["🔴", "🟢", "🟡"]
+            else:
+                st.error(f"Unexpected number of labels: {num_labels}")
                 return "خطأ", 0.0, "⚪"
             
-            # Define labels based on language
-            if language_code == "arabic":
-                labels = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
-            else:
-                labels= {0: "Negative", 1: "Positive", 2: "Neutral"}
-            colors = {0: "🔴", 1: "🟢", 2: "🟡"}
-
-            
-            # Ensure we have enough labels
+            # Safety check
             if predicted_class >= len(labels):
-                return "غير محدد", 0.0, "⚪"
+                st.error(f"Predicted class {predicted_class} out of range for {len(labels)} labels")
+                return "خطأ", 0.0, "⚪"
                 
             return labels[predicted_class], confidence, colors[predicted_class]
             
     except Exception as e:
-        st.error(f"Error in sentiment analysis: {str(e)}")
+        st.error(f"Prediction error: {str(e)}")
         return "خطأ", 0.0, "⚪"
+
+
+
+def test_model_functionality():
+    """Test the model with sample inputs"""
+    test_cases = {
+        "Arabic": [
+            ("أحب هذا الفيديو كثيراً", "إيجابي"),
+            ("لم يعجبني المحتوى", "سلبي"), 
+            ("هذا تعليق عادي", "محايد")
+        ],
+        "English": [
+            ("I love this video", "Positive"),
+            ("I didn't like the content", "Negative"),
+            ("This is a neutral comment", "Neutral")
+        ]
+    }
     
+    for lang, cases in test_cases.items():
+        st.subheader(f"Testing {lang} Model")
+        m, t = load_model(lang)
+        if m is None:
+            continue
+            
+        for text, expected in cases:
+            sentiment, conf, emoji = predict_sentiment(text, lang)
+            st.write(f"Input: '{text}'")
+            st.write(f"Expected: {expected} | Got: {sentiment} {emoji} ({conf:.2f})")
+            st.write("---")
+DEBUG = True
+
+if DEBUG:
+    test_model_functionality()
+    st.stop()
+
 def extract_video_id(url):
     """استخراج معرف الفيديو من الرابط"""
     patterns = [
