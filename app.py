@@ -57,11 +57,11 @@ def download_model_files(language):
     model_files = {
         "ar": {
             "url": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
-            "dest": f"models/{model_dir}/model.safetensors"
+            "dest": f"{model_dir}/model.safetensors"
         },
         "en": {
             "url": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-",
-            "dest": f"models/{model_dir}/model.safetensors"
+            "dest": f"{model_dir}/model.safetensors"
         }
     }
     
@@ -81,7 +81,8 @@ def load_model(language):
         "config.json",
         "vocab.txt",
         "special_tokens_map.json",
-        "tokenizer_config.json"
+        "tokenizer_config.json",
+        "model.safetensors"
     ]
     
     missing_files = [f for f in required_files if not os.path.exists(f"{model_path}/{f}")]
