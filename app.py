@@ -15,8 +15,19 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import emoji
 
+# Download NLTK data (only once)
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords')
+    nltk.download('punkt')
+
+# ==============================================
+# Helper Functions
+# ==============================================
+
 def has_emoji(text):
-    """تحقق إذا كان النص يحتوي على إيموجي"""
+    """Check if text contains emoji"""
     emoji_pattern = re.compile("["
         u"\U0001F600-\U0001F64F"  # Emoticons
         u"\U0001F300-\U0001F5FF"  # Symbols & Pictographs
@@ -32,13 +43,12 @@ def has_emoji(text):
     return bool(emoji_pattern.search(text))
 
 def improved_convert_emojis(text):
-    """تحسين معالجة الإيموجي مع إعطاء أوزان أكبر للمشاعر"""
-    # تحويل الإيموجي إلى نص
+    """Convert emojis to Arabic words with enhanced sentiment weighting"""
     text = emoji.demojize(text, language='en')
     
-    # قاموس محسن للإيموجي العربية
+    # Enhanced Arabic emoji translations
     emoji_translations = {
-        # إيجابي قوي
+        # Strong positive
         "face_with_tears_of_joy": "ضحك سعادة فرح جميل",
         "red_heart": "حب عشق محبة رائع",
         "smiling_face_with_smiling_eyes": "سعادة فرح بهجة جميل",
@@ -52,14 +62,14 @@ def improved_convert_emojis(text):
         "face_blowing_a_kiss": "حب قبلة سعادة جميل",
         "smiling_face_with_heart-eyes": "حب سعادة جميل رائع",
         
-        # سلبي
+        # Negative
         "crying_face": "حزن بكاء أسف سيء",
         "angry_face": "غضب زعل سيء",
         "broken_heart": "حزن ألم فراق سيء",
         "disappointed_face": "خيبة أمل حزن سيء",
         "face_with_steam_from_nose": "غضب زعل سيء",
         
-        # رموز مباشرة
+        # Direct symbols
         "😂": "ضحك سعادة فرح جميل", "❤": "حب محبة رائع", "😍": "حب إعجاب جميل رائع",
         "😊": "سعادة فرح جميل", "👍": "إعجاب موافقة رائع", "😢": "حزن بكاء سيء",
         "👏": "تصفيق إعجاب رائع", "🔥": "رائع ممتاز جميل يجنن", "😠": "غضب زعل سيء",
@@ -75,14 +85,11 @@ def improved_convert_emojis(text):
     return text
 
 def enhanced_normalize_arabic(text):
-    """تطبيع محسن للنص العربي مع الحفاظ على الكلمات المهمة"""
-    original_text = text
-    
-    # تحويل الإيموجي أولاً
+    """Enhanced Arabic text normalization preserving important words"""
     if has_emoji(text):
         text = improved_convert_emojis(text)
     
-    # كلمات إيجابية مهمة يجب الحفاظ عليها
+    # Important sentiment indicators to preserve
     positive_indicators = [
         'رائع', 'جميل', 'ممتاز', 'حلو', 'جامد', 'يجنن', 'عظيم', 'مذهل', 'تحفة',
         'أحب', 'بحب', 'حب', 'محبة', 'اعجاب', 'موافقة', 'برافو', 'تصفيق',
@@ -91,14 +98,13 @@ def enhanced_normalize_arabic(text):
         'احسنت', 'مبروك', 'موفق', 'ناجح', 'جيد', 'حسن', 'منيح', 'كويس'
     ]
     
-    # كلمات سلبية مهمة
     negative_indicators = [
         'سيء', 'وحش', 'مش حلو', 'مخرب', 'فظيع', 'قبيح', 'غبي', 'سخيف',
         'أكره', 'كرهت', 'زهقت', 'ملل', 'حزن', 'زعل', 'غضب', 'خيبة',
         'تعبان', 'مملل', 'بطال', 'زفت', 'محبط', 'مستاء', 'متضايق'
     ]
     
-    # إضافة مؤشرات المشاعر
+    # Add sentiment indicators
     sentiment_boost = ""
     for word in positive_indicators:
         if word in text.lower():
@@ -108,35 +114,35 @@ def enhanced_normalize_arabic(text):
         if word in text.lower():
             sentiment_boost += " سلبي_قوي "
     
-    # تطبيع النص الأساسي
-    text = re.sub(r'[^\u0600-\u06FF\s]', '', text)  # الاحتفاظ بالعربي فقط
-    text = re.sub(r'[إأآا]', 'ا', text)  # توحيد الألف
-    text = re.sub(r'ى', 'ي', text)  # توحيد الياء
-    text = re.sub(r'ؤ', 'ء', text)  # توحيد الهمزة
-    text = re.sub(r'ئ', 'ء', text)  # توحيد الهمزة
-    text = re.sub(r'ة', 'ه', text)  # توحيد التاء المربوطة
+    # Basic text normalization
+    text = re.sub(r'[^\u0600-\u06FF\s]', '', text)  # Keep Arabic only
+    text = re.sub(r'[إأآا]', 'ا', text)  # Unify alef
+    text = re.sub(r'ى', 'ي', text)  # Unify yeh
+    text = re.sub(r'ؤ', 'ء', text)  # Unify hamza
+    text = re.sub(r'ئ', 'ء', text)  # Unify hamza
+    text = re.sub(r'ة', 'ه', text)  # Unify ta marbuta
     
-    # معالجة النفي العامي
+    # Handle colloquial negation
     text = re.sub(r'\bمش\b', 'ليس', text)
     text = re.sub(r'\bمو\b', 'ليس', text)
     text = re.sub(r'\bما\s+(\w+)', r'ليس \1', text)
-    text = re.sub(r'\b(\w+)ش\b', r'\1', text)  # إزالة "ش" النفي
+    text = re.sub(r'\b(\w+)ش\b', r'\1', text)  # Remove negation "sh"
     
-    # إزالة الأرقام والإنجليزي
+    # Remove numbers and English
     text = re.sub(r'\d+', '', text)
     text = re.sub(r'[a-zA-Z]', '', text)
-    text = re.sub(r'[^\u0621-\u064A\s]', ' ', text)  # العربي فقط
+    text = re.sub(r'[^\u0621-\u064A\s]', ' ', text)  # Arabic only
     
-    # دمج النص المعالج مع مؤشرات المشاعر
+    # Combine processed text with sentiment indicators
     final_text = (text + " " + sentiment_boost).strip()
     
     return ' '.join(final_text.split())
 
 def post_process_sentiment(text, sentiment, confidence):
-    """معالجة لاحقة لتحسين دقة التصنيف"""
+    """Post-processing to improve sentiment accuracy"""
     original_text = text.lower()
     
-    # قواعد خاصة للنصوص الدينية
+    # Rules for religious content
     religious_keywords = ['الله', 'النبي', 'صلى', 'استغفر', 'دعاء', 'رب', 'يارب', 'اللهم', 'سبحان', 'الحمد']
     if any(word in original_text for word in religious_keywords):
         if sentiment == "سلبي":
@@ -144,7 +150,7 @@ def post_process_sentiment(text, sentiment, confidence):
         elif sentiment == "محايد":
             return "إيجابي", max(confidence, 0.75)
     
-    # قواعد للإيموجي الإيجابية القوية
+    # Rules for strong positive emojis
     strong_positive_emojis = ['🎉', '❤', '😍', '🥰', '🔥', '👏', '😂', '🤣', '✨', '💕', '😘', '😊']
     emoji_count = sum([original_text.count(emoji) for emoji in strong_positive_emojis])
     if emoji_count >= 2:
@@ -153,13 +159,13 @@ def post_process_sentiment(text, sentiment, confidence):
         elif sentiment == "سلبي" and emoji_count >= 3:
             return "إيجابي", max(confidence, 0.80)
     
-    # قواعد للكلمات الإيجابية القوية
+    # Rules for strong positive words
     strong_positive_words = ['رائع', 'جميل', 'ممتاز', 'روعة', 'يجنن', 'أحب', 'بحب', 'جامد', 'تحفة', 'حبيبتي']
     positive_count = sum([1 for word in strong_positive_words if word in original_text])
     if positive_count >= 1 and sentiment == "محايد":
         return "إيجابي", max(confidence, 0.75)
     
-    # قواعد للكلمات السلبية القوية
+    # Rules for strong negative words
     strong_negative_words = ['مخرب', 'وحش', 'سيء', 'فظيع', 'أكره', 'كرهت', 'قبيح', 'غبي']
     if any(word in original_text for word in strong_negative_words):
         if sentiment == "محايد":
@@ -167,37 +173,81 @@ def post_process_sentiment(text, sentiment, confidence):
         elif sentiment == "إيجابي" and confidence < 0.7:
             return "سلبي", max(confidence, 0.75)
     
-    # قواعد للأسئلة البسيطة
+    # Rules for simple questions
     question_patterns = ['ايش اسم', 'مين', 'وين', 'كيف', 'متى', 'ممكن اعرف', 'كم حلقة', 'شو اسم']
     if any(pattern in original_text for pattern in question_patterns):
         return "محايد", max(confidence, 0.70)
     
-    # قواعد لعبارات الشكر والتقدير
+    # Rules for thanks and appreciation
     thanks_patterns = ['شكرا', 'مشكور', 'الف شكر', 'يعطيك', 'بارك الله', 'جزاك الله']
     if any(pattern in original_text for pattern in thanks_patterns):
         return "إيجابي", max(confidence, 0.85)
     
-    # إذا كانت الثقة منخفضة جداً، استخدم التحليل الاحتياطي
+    # Fallback for very low confidence
     if confidence < 0.4:
         return get_enhanced_fallback_sentiment(text, "arabic")[:2]
     
     return sentiment, confidence
 
+def get_enhanced_fallback_sentiment(text, language):
+    """Enhanced fallback sentiment analysis with expanded rules"""
+    text_lower = text.lower()
+    
+    # Expanded word lists
+    positive_words = {
+        'ar': ['رائع', 'جميل', 'ممتاز', 'روعة', 'يجنن', 'أحب', 'بحب', 'جامد', 'تحفة', 'حبيبتي',
+               'سعادة', 'فرح', 'بهجة', 'ضحك', 'مبسوط', 'منبسط', 'حبيب', 'روعة', 'بديع', 'لذيذ',
+               'استمري', 'شكرا', 'مشكور', 'الف شكر', 'احسنت', 'مبروك', 'موفق', 'ناجح', 'جيد', 'حسن'],
+        'en': ['good', 'great', 'awesome', 'amazing', 'excellent', 'love', 'like', 'best', 
+               'wonderful', 'fantastic', 'perfect', 'nice', 'beautiful', 'happy']
+    }
+    
+    negative_words = {
+        'ar': ['سيء', 'وحش', 'مش حلو', 'مخرب', 'فظيع', 'قبيح', 'غبي', 'سخيف',
+               'أكره', 'كرهت', 'زهقت', 'ملل', 'حزن', 'زعل', 'غضب', 'خيبة',
+               'تعبان', 'مملل', 'بطال', 'زفت', 'محبط', 'مستاء', 'متضايق'],
+        'en': ['bad', 'terrible', 'awful', 'hate', 'worst', 'horrible', 'disgusting',
+               'stupid', 'ugly', 'boring', 'annoying', 'angry', 'sad']
+    }
+    
+    lang_code = 'ar' if language == 'arabic' else 'en'
+    
+    pos_count = sum(1 for word in positive_words[lang_code] if word in text_lower)
+    neg_count = sum(1 for word in negative_words[lang_code] if word in text_lower)
+    
+    # Emoji analysis
+    emoji_sentiment = 0
+    if has_emoji(text):
+        converted = improved_convert_emojis(text)
+        pos_emoji = sum(1 for word in positive_words[lang_code] if word in converted)
+        neg_emoji = sum(1 for word in negative_words[lang_code] if word in converted)
+        emoji_sentiment = pos_emoji - neg_emoji
+    
+    # Calculate total sentiment
+    total_sentiment = (pos_count - neg_count) + emoji_sentiment
+    
+    if total_sentiment > 0:
+        return ("إيجابي" if lang_code == 'ar' else "Positive"), 0.75, "🟢"
+    elif total_sentiment < 0:
+        return ("سلبي" if lang_code == 'ar' else "Negative"), 0.75, "🔴"
+    else:
+        return ("محايد" if lang_code == 'ar' else "Neutral"), 0.5, "🟡"
+
 def improved_predict_sentiment(text, language, model, tokenizer):
-    """دالة محسنة لتحليل المشاعر مع معالجة أفضل للعربية"""
+    """Enhanced sentiment prediction with better Arabic handling"""
     if not text.strip():
         return "محايد" if language == "arabic" else "Neutral", 0.5, "🟡"
     
     original_text = text
     
-    # تحسين النص للمعالجة
+    # Text preprocessing
     if language.lower() == "arabic":
         processed_text = enhanced_normalize_arabic(text)
     else:
         processed_text = text.strip()
     
     try:
-        # محاولة التنبؤ بالنموذج
+        # Model prediction attempt
         if len(processed_text) > 500:
             processed_text = processed_text[:500]
         
@@ -213,7 +263,7 @@ def improved_predict_sentiment(text, language, model, tokenizer):
             return_attention_mask=True
         )
         
-        # تصفية الرموز خارج المفردات
+        # Filter out-of-vocabulary tokens
         input_ids = inputs['input_ids'][0]
         unk_token_id = tokenizer.unk_token_id if tokenizer.unk_token_id is not None else 1
         valid_mask = input_ids < model_vocab_size
@@ -223,7 +273,7 @@ def improved_predict_sentiment(text, language, model, tokenizer):
         if torch.any(inputs['input_ids'] >= model_vocab_size):
             return get_enhanced_fallback_sentiment(original_text, language)
         
-        # التنبؤ بالنموذج
+        # Model prediction
         with torch.no_grad():
             outputs = model(**inputs)
             logits = outputs.logits
@@ -231,7 +281,7 @@ def improved_predict_sentiment(text, language, model, tokenizer):
             predicted_class = torch.argmax(logits, dim=1).item()
             confidence = probabilities[predicted_class].item()
         
-        # تحويل التسميات
+        # Label mapping
         if hasattr(model.config, 'id2label') and model.config.id2label:
             model_label = None
             if predicted_class in model.config.id2label:
@@ -265,7 +315,7 @@ def improved_predict_sentiment(text, language, model, tokenizer):
             else:
                 raise ValueError("Could not find model label")
         else:
-            # تسميات احتياطية
+            # Fallback labels
             if language == "arabic":
                 labels = ["سلبي", "محايد", "إيجابي"]
                 colors = ["🔴", "🟡", "🟢"]
@@ -279,54 +329,78 @@ def improved_predict_sentiment(text, language, model, tokenizer):
             sentiment_label = labels[predicted_class]
             color = colors[predicted_class]
         
-        # معالجة لاحقة لتحسين الدقة
+        # Post-processing for better accuracy
         final_sentiment, final_confidence = post_process_sentiment(
             original_text, sentiment_label, confidence
         )
-        return sentiment_label, confidence, color
+        
+        return final_sentiment, final_confidence, color
             
-    except Exception:
-        return get_fallback_sentiment(text, language)
+    except Exception as e:
+        return get_enhanced_fallback_sentiment(original_text, language)
 
-def get_fallback_sentiment(text, language):
-    """Fallback sentiment analysis using simple keyword matching"""
-    text = text.lower()
-    
-    # Simple keyword-based sentiment
-    positive_words = ['good', 'great', 'awesome', 'amazing', 'excellent', 'love', 'like', 'best', 'wonderful', 'fantastic',
-                     'جميل', 'رائع', 'ممتاز', 'حب', 'أحب', 'جيد', 'عظيم', 'مذهل']
-    negative_words = ['bad', 'terrible', 'awful', 'hate', 'worst', 'horrible', 'disgusting', 'stupid', 'ugly',
-                     'سيء', 'فظيع', 'أكره', 'قبيح', 'غبي', 'سخيف']
-    
-    pos_count = sum(1 for word in positive_words if word in text)
-    neg_count = sum(1 for word in negative_words if word in text)
-    
-    if pos_count > neg_count:
-        return ("إيجابي" if language == "arabic" else "Positive"), 0.7, "🟢"
-    elif neg_count > pos_count:
-        return ("سلبي" if language == "arabic" else "Negative"), 0.7, "🔴"
-    else:
-        return ("محايد" if language == "arabic" else "Neutral"), 0.5, "🟡"
+# ==============================================
+# Model Download and Loading
+# ==============================================
 
-# Display model info and run validation
-# if model is not None and tokenizer is not None:
-#     st.write(f"Model configuration: {model.config}")
-#     st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
+def download_model_files(language):
+    """Download model files from Google Drive"""
+    lang_code = "ar" if language == "Arabic" else "en"
+    model_dir = f"models/{lang_code}"
+    os.makedirs(model_dir, exist_ok=True)
     
-#     # Test the model with a simple sentence
-#     st.subheader("🧪 Model Test")
-#     test_text = "This is a test sentence" if language == "English" else "هذه جملة تجريبية"
+    config_files = ["config.json", "vocab.txt", "special_tokens_map.json", "tokenizer_config.json"]
     
-#     with st.expander("Click to run model test"):
-#         try:
-#             test_result = predict_sentiment(test_text, language_code)
-#             st.success(f"✅ Model test successful: {test_result}")
-#         except Exception as e:
-#             st.error(f"❌ Model test failed: {str(e)}")
-# else:
-#     st.error("❌ Model or tokenizer not loaded properly!")
+    for filename in config_files:
+        src_path = f"{lang_code}/{filename}"
+        dst_path = f"{model_dir}/{filename}"
+        
+        if not os.path.exists(dst_path):
+            try:
+                shutil.copyfile(src_path, dst_path)
+            except Exception as e:
+                st.error(f"Error copying {filename}: {str(e)}")
+
+    model_files = {
+        "ar": {
+            "url": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
+            "dest": f"{model_dir}/model.safetensors"
+        },
+        "en": {
+            "url": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-",
+            "dest": f"{model_dir}/model.safetensors"
+        }
+    }
+    
+    if not os.path.exists(model_files[lang_code]["dest"]):
+        try:
+            gdown.download(model_files[lang_code]["url"], model_files[lang_code]["dest"], quiet=False)
+        except Exception as e:
+            st.error(f"Download error: {str(e)}")
+
+@st.cache_resource
+def load_model(language):
+    """Load the sentiment analysis model"""
+    lang_code = "ar" if language == "Arabic" else "en"
+    model_path = f"models/{lang_code}"
+    
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = AutoModelForSequenceClassification.from_pretrained(model_path)
+        
+        model.resize_token_embeddings(len(tokenizer))
+        model.eval()
+        return model, tokenizer
+    except Exception as e:
+        st.error(f"Model loading failed: {str(e)}")
+        return None, None
+
+# ==============================================
+# YouTube Comment Functions
+# ==============================================
 
 def extract_video_id(url):
+    """Extract YouTube video ID from URL"""
     patterns = [
         r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})',
         r'youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})'
@@ -338,7 +412,7 @@ def extract_video_id(url):
     return None
 
 def get_comments_without_api(video_url, max_comments=100):
-    """Fetch comments without API"""
+    """Fetch YouTube comments without API"""
     video_id = extract_video_id(video_url)
     downloader = YoutubeCommentDownloader()
     comments = []
@@ -356,11 +430,16 @@ def get_comments_without_api(video_url, max_comments=100):
         st.error(f"Error during scraping: {str(e)}")
     return comments
 
-def analyze_comments(comments, language_code="english"):
-    """Analyze sentiment of comments with language support"""
+def analyze_comments(comments, language_code, model, tokenizer):
+    """Analyze sentiment of comments"""
     results = []
     for comment in comments:
-        sentiment, confidence, emoji = predict_sentiment(comment['text'], language_code)
+        sentiment, confidence, emoji = improved_predict_sentiment(
+            comment['text'], 
+            language_code,
+            model,
+            tokenizer
+        )
         results.append({
             'comment': comment['text'][:100] + "..." if len(comment['text']) > 100 else comment['text'],
             'author': comment['author'],
@@ -372,10 +451,10 @@ def analyze_comments(comments, language_code="english"):
     return results
 
 def create_visualizations(results, language):
-    """Create visualizations"""
+    """Create sentiment visualizations"""
     df = pd.DataFrame(results)
     
-    if language == "arabic":
+    if language == "Arabic":
         titles = {
             'pie': "توزيع المشاعر",
             'bar': "عدد التعليقات حسب المشاعر",
@@ -425,151 +504,200 @@ def create_visualizations(results, language):
 
     return fig_pie, fig_bar, fig_confidence, df
 
-# Sidebar
-st.sidebar.header("⚙️ Settings")
+# ==============================================
+# Streamlit UI
+# ==============================================
 
-# Video URL input
-video_url = st.sidebar.text_input(
-    "YouTube Video URL:",
-    placeholder="https://www.youtube.com/watch?v=..."
-)
-
-# Number of comments
-max_comments = st.sidebar.slider("Number of comments to analyze:", 10, 500, 100)
-
-# Analyze button
-analyze_button = st.sidebar.button("🔍 Analyze Comments", type="primary")
-
-# Single comment analysis
-st.sidebar.markdown("---")
-st.sidebar.header("📝 Single Comment Analysis")
-single_comment = st.sidebar.text_area("Enter a comment to analyze:")
-
-if st.sidebar.button("Analyze Comment"):
-    if single_comment:
-        st.sidebar.write("🔍 **Debug Info:**")
-        # Show token analysis
-        try:
-            inputs = tokenizer(single_comment, return_tensors="pt", truncation=True, padding=True, max_length=512)
-            input_ids = inputs['input_ids'][0]
-            model_vocab_size = model.config.vocab_size
-            
-            oov_tokens = (input_ids >= model_vocab_size).sum().item()
-            st.sidebar.write(f"Total tokens: {len(input_ids)}")
-            st.sidebar.write(f"OOV tokens: {oov_tokens}")
-            st.sidebar.write(f"Max token ID: {input_ids.max().item()}")
-            st.sidebar.write(f"Model vocab limit: {model_vocab_size}")
-        except Exception as e:
-            st.sidebar.write(f"Debug error: {e}")
+def main():
+    st.set_page_config(page_title="YouTube Comments Sentiment Analysis", layout="wide")
+    st.title("🎥 YouTube Comments Sentiment Analysis")
+    st.markdown("---")
     
-        sentiment, confidence, emoji = predict_sentiment(single_comment, language_code)
-        st.sidebar.markdown(f"**Result:** {emoji} {sentiment}")
-        st.sidebar.markdown(f"**Confidence:** {confidence:.2%}")
-    else:
-        st.sidebar.warning("Please enter a comment to analyze")
-
-# Main content
-if analyze_button:
-    if not video_url:
-        st.error("⚠️ Please enter the YouTube video URL")
-    else:
-        video_id = extract_video_id(video_url)
-        if not video_id:
-            st.error("⚠️ Invalid video URL")
+    # Download models
+    download_model_files("English")
+    download_model_files("Arabic")
+    
+    # Language selection
+    st.sidebar.header("🌍 Language Settings")
+    language = st.sidebar.radio(
+        "Select Comment Language:",
+        ("Arabic", "English"),
+        index=0
+    )
+    language_code = "arabic" if language == "Arabic" else "english"
+    
+    # Load model
+    model, tokenizer = load_model(language) 
+    if model is None or tokenizer is None:
+        st.error("Failed to load model - please check the error messages")
+        st.stop()
+    
+    # Video URL input
+    st.sidebar.header("⚙️ Settings")
+    video_url = st.sidebar.text_input(
+        "YouTube Video URL:",
+        placeholder="https://www.youtube.com/watch?v=..."
+    )
+    
+    # Number of comments
+    max_comments = st.sidebar.slider("Number of comments to analyze:", 10, 500, 100)
+    
+    # Analyze button
+    analyze_button = st.sidebar.button("🔍 Analyze Comments", type="primary")
+    
+    # Single comment analysis
+    st.sidebar.markdown("---")
+    st.sidebar.header("📝 Single Comment Analysis")
+    single_comment = st.sidebar.text_area("Enter a comment to analyze:")
+    
+    if st.sidebar.button("Analyze Comment"):
+        if single_comment:
+            sentiment, confidence, emoji_icon = improved_predict_sentiment(
+                single_comment, 
+                language_code,
+                model,
+                tokenizer
+            )
+            st.sidebar.markdown(f"**Result:** {emoji_icon} {sentiment}")
+            st.sidebar.markdown(f"**Confidence:** {confidence:.2%}")
         else:
-            with st.spinner("🔄 Fetching and analyzing comments..."):
-                comments = get_comments_without_api(video_url, max_comments)
-                
-                if not comments:
-                    st.error("❌ No comments found or an error occurred")
-                else:
-                    results = analyze_comments(comments, language_code)
-                    fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language_code)
-                    
-                    st.success(f"✅ Successfully analyzed {len(results)} comments!")
-                    
-                    # عرض الإحصائيات السريعة
-                    col1, col2, col3, col4 = st.columns(4)
-                    sentiment_counts = df['sentiment'].value_counts()
-                    
-                    # Get labels based on language
-                    if language_code == "arabic":
-                        pos_label, neg_label, neu_label = "إيجابي", "سلبي", "محايد"
-                        pos_text, neg_text, neu_text, conf_text = "إيجابي", "سلبي", "محايد", "متوسط الثقة"
-                    else:
-                        pos_label, neg_label, neu_label = "Positive", "Negative", "Neutral"
-                        pos_text, neg_text, neu_text, conf_text = "Positive", "Negative", "Neutral", "Avg. Confidence"
-                    
-                    with col1:
-                        positive = sentiment_counts.get(pos_label, 0)
-                        st.metric(pos_text, f"{positive} ({positive/len(results):.1%})")
-                    
-                    with col2:
-                        negative = sentiment_counts.get(neg_label, 0)
-                        st.metric(neg_text, f"{negative} ({negative/len(results):.1%})")
-                    
-                    with col3:
-                        neutral = sentiment_counts.get(neu_label, 0)
-                        st.metric(neu_text, f"{neutral} ({neutral/len(results):.1%})")
-                    
-                    with col4:
-                        avg_conf = df['confidence'].mean()
-                        st.metric(conf_text, f"{avg_conf:.2%}")
-                    
-                    st.markdown("---")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.plotly_chart(fig_pie, use_container_width=True)
-                    with col2:
-                        st.plotly_chart(fig_bar, use_container_width=True)
-                    
-                    st.plotly_chart(fig_hist, use_container_width=True)
-                    
-                    st.markdown("---")
-                    st.subheader("📋 Comments Details")
-                    
-                    filter_sentiment = st.selectbox(
-                        "Filter by sentiment:" if language == "English" else "تصفية حسب المشاعر:",
-                        ["All"] + list(df['sentiment'].unique())
-                    )
-                    if filter_sentiment != "All":
-                        filtered_df = df[df['sentiment'] == filter_sentiment]
-                    else:
-                        filtered_df = df
-                    
-                    display_cols = ['author', 'comment', 'sentiment', 'confidence', 'likes']
-                    display_df = filtered_df[display_cols].copy()
-                    display_df.columns = ['Author', 'Comment', 'Sentiment', 'Confidence', 'Likes']
-                    display_df['Confidence'] = display_df['Confidence'].apply(lambda x: f"{x:.2%}")
-                    
-                    st.dataframe(
-                        display_df,
-                        use_container_width=True,
-                        hide_index=True
-                    )
-                    
-                    csv = df.to_csv(index=False, encoding='utf-8-sig')
-                    st.download_button(
-                        label="📥 Download Results (CSV)",
-                        data=csv,
-                        file_name=f"youtube_sentiment_{video_id}.csv",
-                        mime="text/csv"
-                    )
-else:
-    st.markdown("""
-    ## 📊 Features:
-    - Automatic sentiment analysis of YouTube comments
-    - Support for both Arabic and English
-    - Interactive visualizations
-    - Detailed statistics
-    - Filtering and CSV download
-    - Single comment analysis
+            st.sidebar.warning("Please enter a comment to analyze")
     
-    ## 🚀 How to Use:
-    1. Select your preferred language (Arabic/English)
-    2. Enter a YouTube video URL in the sidebar
-    3. Choose the number of comments to analyze
-    4. Click "🔍 Analyze Comments"
-    5. View results and download CSV if needed
-    """)
+    # Main content
+    if analyze_button:
+        if not video_url:
+            st.error("⚠️ Please enter the YouTube video URL")
+        else:
+            video_id = extract_video_id(video_url)
+            if not video_id:
+                st.error("⚠️ Invalid video URL")
+            else:
+                with st.spinner("🔄 Fetching and analyzing comments..."):
+                    comments = get_comments_without_api(video_url, max_comments)
+                    
+                    if not comments:
+                        st.error("❌ No comments found or an error occurred")
+                    else:
+                        results = analyze_comments(comments, language_code, model, tokenizer)
+                        fig_pie, fig_bar, fig_hist, df = create_visualizations(results, language)
+                        
+                        st.success(f"✅ Successfully analyzed {len(results)} comments!")
+                        
+                        # Display quick stats
+                        col1, col2, col3, col4 = st.columns(4)
+                        sentiment_counts = df['sentiment'].value_counts()
+                        
+                        # Get labels based on language
+                        if language == "Arabic":
+                            pos_label, neg_label, neu_label = "إيجابي", "سلبي", "محايد"
+                            pos_text, neg_text, neu_text, conf_text = "إيجابي", "سلبي", "محايد", "متوسط الثقة"
+                        else:
+                            pos_label, neg_label, neu_label = "Positive", "Negative", "Neutral"
+                            pos_text, neg_text, neu_text, conf_text = "Positive", "Negative", "Neutral", "Avg. Confidence"
+                        
+                        with col1:
+                            positive = sentiment_counts.get(pos_label, 0)
+                            st.metric(pos_text, f"{positive} ({positive/len(results):.1%})")
+                        
+                        with col2:
+                            negative = sentiment_counts.get(neg_label, 0)
+                            st.metric(neg_text, f"{negative} ({negative/len(results):.1%})")
+                        
+                        with col3:
+                            neutral = sentiment_counts.get(neu_label, 0)
+                            st.metric(neu_text, f"{neutral} ({neutral/len(results):.1%})")
+                        
+                        with col4:
+                            avg_conf = df['confidence'].mean()
+                            st.metric(conf_text, f"{avg_conf:.2%}")
+                        
+                        st.markdown("---")
+                        
+                        # Display charts
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.plotly_chart(fig_pie, use_container_width=True)
+                        with col2:
+                            st.plotly_chart(fig_bar, use_container_width=True)
+                        
+                        st.plotly_chart(fig_hist, use_container_width=True)
+                        
+                        st.markdown("---")
+                        st.subheader("📋 Comments Details")
+                        
+                        # Filter options
+                        if language == "Arabic":
+                            filter_label = "تصفية حسب المشاعر:"
+                            all_option = "الكل"
+                        else:
+                            filter_label = "Filter by sentiment:"
+                            all_option = "All"
+                            
+                        filter_sentiment = st.selectbox(
+                            filter_label,
+                            [all_option] + list(df['sentiment'].unique())
+                        
+                        if filter_sentiment != all_option:
+                            filtered_df = df[df['sentiment'] == filter_sentiment]
+                        else:
+                            filtered_df = df
+                        
+                        # Display results table
+                        display_cols = ['author', 'comment', 'sentiment', 'confidence', 'likes']
+                        display_df = filtered_df[display_cols].copy()
+                        display_df.columns = ['Author', 'Comment', 'Sentiment', 'Confidence', 'Likes']
+                        display_df['Confidence'] = display_df['Confidence'].apply(lambda x: f"{x:.2%}")
+                        
+                        st.dataframe(
+                            display_df,
+                            use_container_width=True,
+                            hide_index=True
+                        )
+                        
+                        # Download button
+                        csv = df.to_csv(index=False, encoding='utf-8-sig')
+                        st.download_button(
+                            label="📥 Download Results (CSV)",
+                            data=csv,
+                            file_name=f"youtube_sentiment_{video_id}.csv",
+                            mime="text/csv"
+                        )
+    else:
+        # Display instructions
+        if language == "Arabic":
+            st.markdown("""
+            ## 📊 المميزات:
+            - تحليل تلقائي لمشاعر تعليقات اليوتيوب
+            - دعم اللغتين العربية والإنجليزية
+            - رسوم بيانية تفاعلية
+            - إحصائيات مفصلة
+            - تصفية النتائج وتنزيلها بصيغة CSV
+            - تحليل التعليقات الفردية
+            
+            ## 🚀 طريقة الاستخدام:
+            1. اختر اللغة المفضلة (عربي/إنجليزي)
+            2. أدخل رابط فيديو اليوتيوب في الشريط الجانبي
+            3. اختر عدد التعليقات المراد تحليلها
+            4. اضغط على "تحليل التعليقات"
+            5. استعرض النتائج وقم بتنزيلها إذا رغبت
+            """)
+        else:
+            st.markdown("""
+            ## 📊 Features:
+            - Automatic sentiment analysis of YouTube comments
+            - Support for both Arabic and English
+            - Interactive visualizations
+            - Detailed statistics
+            - Filtering and CSV download
+            - Single comment analysis
+            
+            ## 🚀 How to Use:
+            1. Select your preferred language (Arabic/English)
+            2. Enter a YouTube video URL in the sidebar
+            3. Choose the number of comments to analyze
+            4. Click "Analyze Comments"
+            5. View results and download CSV if needed
+            """)
+
+if __name__ == "__main__":
+    main()
