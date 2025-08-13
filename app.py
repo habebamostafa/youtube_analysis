@@ -159,7 +159,7 @@ def predict_sentiment(text, language):
         st.error(f"Error in sentiment analysis: {str(e)}")
         return "خطأ", 0.0, "⚪"
     
-    
+
 st.write(f"Model configuration: {model.config}")
 st.write(f"Model class names: {model.config.id2label if hasattr(model.config, 'id2label') else 'Not available'}")
     
@@ -200,14 +200,11 @@ def get_youtube_comments(video_id, api_key=None, max_comments=100):
 
 def analyze_comments(comments, language_code="english"):
     """Analyze sentiment of comments with language support"""
-    if language_code == "arabic":
-        label_map = {0: "سلبي", 1: "إيجابي", 2: "محايد"}
-    else:
-        label_map = {0: "Negative", 1: "Positive", 2: "Neutral"}
-
     results = []
     for comment in comments:
-        sentiment, confidence, emoji = predict_sentiment(comment['text'], language_code)
+        # Pass the full language name ("Arabic"/"English") not the code
+        language = "Arabic" if language_code == "arabic" else "English"
+        sentiment, confidence, emoji = predict_sentiment(comment['text'], language)
         results.append({
             'comment': comment['text'][:100] + "..." if len(comment['text']) > 100 else comment['text'],
             'author': comment['author'],
