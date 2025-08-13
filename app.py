@@ -57,11 +57,11 @@ def download_model_files(language):
     model_files = {
         "ar": {
             "url": "https://drive.google.com/uc?id=1dceNrR-xO-UclWEAZBCNC3YgzykdNnnH",
-            "dest": f"{model_dir}/model.safetensors"
+            "dest": f"models/{model_dir}/model.safetensors"
         },
         "en": {
             "url": "https://drive.google.com/uc?id=1Q3WFKlNe12qXcwDnUmrrf6OkamwiXLG-",
-            "dest": f"{model_dir}/model.safetensors"
+            "dest": f"models/{model_dir}/model.safetensors"
         }
     }
     
