@@ -11,11 +11,11 @@ import gdown
 import os
 import shutil
 import nltk
-nltk.download('stopwords')
+
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-
-# قائمة ستوب وورد من NLTK
+nltk.download('stopwords')
+nltk.download('punkt_tab')
 ARABIC_STOPWORDS = set(stopwords.words("arabic"))
 import emoji
 
