@@ -72,22 +72,22 @@ def load_model(language):
         model_vocab_size = model.config.vocab_size if hasattr(model.config, 'vocab_size') else 30000
         
         # Debug output
-        st.write("✅ Model loaded successfully")
-        st.write(f"Model architecture: {model.__class__.__name__}")
-        st.write(f"Number of classes: {model.config.num_labels}")
-        st.write(f"Tokenizer vocab size: {tokenizer_vocab_size}")
-        st.write(f"Model vocab size: {model_vocab_size}")
+        # st.write("✅ Model loaded successfully")
+        # st.write(f"Model architecture: {model.__class__.__name__}")
+        # st.write(f"Number of classes: {model.config.num_labels}")
+        # st.write(f"Tokenizer vocab size: {tokenizer_vocab_size}")
+        # st.write(f"Model vocab size: {model_vocab_size}")
         model.resize_token_embeddings(len(tokenizer))
 
         # Check vocab size compatibility
-        if tokenizer_vocab_size != model_vocab_size:
-            st.warning(f"⚠️ Vocab size mismatch! Tokenizer: {tokenizer_vocab_size}, Model: {model_vocab_size}")
-            st.info("This may cause 'index out of range' errors. Using fallback method for problematic tokens.")
+        # if tokenizer_vocab_size != model_vocab_size:
+        #     st.warning(f"⚠️ Vocab size mismatch! Tokenizer: {tokenizer_vocab_size}, Model: {model_vocab_size}")
+        #     st.info("This may cause 'index out of range' errors. Using fallback method for problematic tokens.")
         
-        if hasattr(model.config, 'id2label'):
-            st.write("Class labels:", model.config.id2label)
-        else:
-            st.warning("No class label mapping found in model config")
+        # if hasattr(model.config, 'id2label'):
+        #     st.write("Class labels:", model.config.id2label)
+        # else:
+        #     st.warning("No class label mapping found in model config")
         
         model.eval()
         return model, tokenizer
